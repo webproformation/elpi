@@ -4,14 +4,14 @@ import * as THREE from 'three';
 import { supabase } from './lib/supabase';
 import { 
   ArrowRight, CheckCircle2, Loader2, Sparkles, 
-  ChevronRight, BedDouble, Bath, Sofa, Utensils, // Bath remplace Briefcase
-  Settings, LogOut, Award, Star, Shield, Save, MapPin, Phone, Mail, BookOpen,
-  FileText, Video, AlertCircle, Trophy, Crown, Zap, X, 
-  MessageCircle, // Pour Communication
-  ShieldCheck,   // Pour Sécurité
-  Droplets,      // Pour Hygiène
-  Timer, AlertTriangle, MousePointerClick,
-ListTodo, Bell, Bot, ChevronUp, ChevronDown // <--- AJOUTEZ CEUX-CI
+  ChevronRight, BedDouble, Bath, Sofa, Utensils,
+  Settings, LogOut, Star, Shield, Save, MapPin, Phone, Mail, BookOpen, // Award retiré ici
+  FileText, Video, AlertCircle, Trophy, Zap, X, // Crown retiré ici
+  MessageCircle, 
+  ShieldCheck,   
+  // Droplets retiré ici
+  Timer, AlertTriangle, // MousePointerClick retiré ici
+  ListTodo, Bell, Send, Bot, ChevronUp, ChevronDown
 } from 'lucide-react';
 
 // --- TYPES ---
