@@ -98,10 +98,14 @@ const CreateAccountView = ({ email, onComplete }: { email: string, onComplete: (
   const [name, setName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('/01.png');
   const avatars = ['/01.png', '/02.png', '/03.png', '/04.png', '/05.png', '/06.png', '/07.png', '/08.png', '/11.png', '/12.png', '/13.png', '/14.png', '/15.png', '/16.png', '/17.png', '/18.png'];
+
   return (
     <div className="h-screen bg-[#F0F4F8] flex items-center justify-center p-4 font-sans overflow-hidden">
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl max-w-2xl w-full text-center animate-fade-in-up border border-white/50">
         <h2 className="text-2xl font-bold text-[#962588] mb-2">Bienvenue chez ELPI !</h2>
+        {/* C'est cette ligne qui corrige l'erreur en utilisant la variable email : */}
+        <p className="text-gray-500 mb-6 text-sm">Votre espace est prêt pour : <span className="font-bold text-gray-800">{email}</span></p>
+        
         <div className="space-y-6 text-left mt-6">
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Votre Prénom" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#00aeb7] outline-none" /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-3">Avatar</label><div className="bg-gray-50 p-4 rounded-xl border border-gray-100 h-64 overflow-y-auto custom-scrollbar shadow-inner"><div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">{avatars.map((src) => (<button key={src} onClick={() => setSelectedAvatar(src)} className={`relative rounded-full p-1 transition-all ${selectedAvatar === src ? 'ring-4 ring-[#00aeb7] scale-110 z-10 bg-white' : 'opacity-80'}`}><img src={src} alt="Avatar" className="w-full aspect-square rounded-full object-cover" /></button>))}</div></div></div>
