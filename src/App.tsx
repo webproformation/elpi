@@ -28,40 +28,6 @@ const EMOTION_IMAGES: Record<string, string> = {
   happy: '/md1.png', neutral: '/md2.png', angry: '/md3.png', sad: '/md4.png'
 };
 
-// --- À SUPPRIMER ENTIÈREMENT ---
-const SCENARIO_SALON = [
-  {
-    id: 1, speaker: "Mme Durand", emotion: "angry", 
-    text: "NON ! Je ne veux voir personne ! Ma fille m'a encore posé un lapin, j'en ai assez de tout ça ! Sortez !",
-    choices: [
-      { text: "Madame, je comprends votre colère, mais je ne suis pas votre fille. Je suis là pour vous aider.", type: "authoritarian", impact: { communication: -10, security: 0, hygiene: 0 }, next: 2 },
-      { text: "Je vois que vous êtes très déçue. C'est difficile quand les plans changent à la dernière minute...", type: "empathic", impact: { communication: +20, security: 0, hygiene: 0 }, next: 3 }, // Gain Communication
-      { text: "(Reculer vers la porte) Oh la la... je repasserai quand vous serez calmée.", type: "avoidant", impact: { communication: -5, security: 0, hygiene: 0 }, next: 4 }
-    ]
-  },
-  {
-    id: 2, speaker: "Mme Durand", emotion: "neutral", text: "C'est ça, faites votre travail de robot. Allez, dépêchons-nous.",
-    choices: [
-      { text: "Très bien. Je vois que le tapis est replié, je le remets pour votre sécurité.", type: "security", impact: { communication: +5, security: +15, hygiene: 0 }, next: 5 },
-      { text: "D'accord. On file à la salle de bain tout de suite.", type: "rush", impact: { communication: -5, security: -5, hygiene: 0 }, next: 5 }
-    ]
-  },
-  {
-    id: 3, speaker: "Mme Durand", emotion: "sad", text: "(Les larmes aux yeux) Elle avait promis... Je me sens si inutile toute seule ici.",
-    choices: [
-      { text: "Prendre soin de vous, c'est important. On y va doucement ?", type: "empathic", impact: { communication: +15, security: 0, hygiene: 0 }, next: 6 },
-      { text: "Allez, ne pleurez pas. Regardez, il fait beau dehors !", type: "distraction", impact: { communication: +5, security: 0, hygiene: 0 }, next: 5 }
-    ]
-  },
-  {
-    id: 4, speaker: "Mme Durand", emotion: "angry", text: "C'est ça, fuyez ! Vous êtes payé à rien faire de toute façon !",
-    choices: [{ text: "Je reste. Excusez-moi. On reprend depuis le début ?", type: "redemption", impact: { communication: +5, security: 0, hygiene: 0 }, next: 2 }]
-  },
-  { id: 5, speaker: "Mme Durand", emotion: "neutral", text: "Bon... Allons-y.", choices: [], end: true },
-  { id: 6, speaker: "Mme Durand", emotion: "happy", text: "Merci de m'écouter. Ça me donne un peu de courage. On peut y aller.", choices: [], end: true }
-];
-// --------------------------------
-
 // --- COMPOSANT 1 : LANDING PAGE ---
 const LandingView = ({ onSuccess }: { onSuccess: (email: string) => void }) => {
   const [email, setEmail] = useState('');
