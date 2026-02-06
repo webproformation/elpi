@@ -466,12 +466,12 @@ const BathroomGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onU
   );
 };
 
-// --- COMPOSANT JEU 4 : CUISINE (AUTO-START) ---
+// --- COMPOSANT JEU 4 : CUISINE (CORRIGÉ & BLINDÉ) ---
 const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void }) => {
   const [phase, setPhase] = useState<'planning' | 'execution' | 'transmission' | 'feedback'>('planning');
-  const [isLoading, setIsLoading] = useState(true); // Commence à true
+  const [loading, setLoading] = useState(true);
 
-  // État initial vide ou placeholder, il sera écrasé par l'IA
+  // Initialisation avec des tableaux vides pour éviter le crash .map()
   const [tasks, setTasks] = useState<any[]>([]);
   const [scenarioNotifications, setScenarioNotifications] = useState<string[]>([]);
   
@@ -479,35 +479,59 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
   const [report, setReport] = useState("");
   const [aiFeedback, setAiFeedback] = useState("");
 
-  // Lancement automatique au montage du composant
+  // Scénario de secours (Fallback)
+  const FALLBACK_TASKS = [
+    { id: 1, name: "Lavage des mains", priority: "high" },
+    { id: 2, name: "Vérifier DLC yaourts", priority: "high" },
+    { id: 3, name: "Mixer repas M. Paul", priority: "medium" },
+    { id: 4, name: "Servir Mme Durand", priority: "medium" }
+  ];
+  const FALLBACK_NOTIFS = ["⚠️ Frigo à 12°C", "🤢 Refus de manger"];
+
+  // Lancement automatique IA
   useEffect(() => {
-    generateNewScenario();
+    const fetchScenario = async () => {
+      setLoading(true);
+      try {
+        console.log("🤖 Demande scénario Cuisine...");
+        const { data, error } = await supabase.functions.invoke('generate-scenario', {
+          body: { gameType: 'kitchen-meal' } 
+        });
+
+        if (error) throw error;
+        if (!data) throw new Error("Donnée vide");
+
+        let result = data;
+
+        // NETTOYAGE JSON (Comme pour le salon)
+        if (typeof result === 'string') {
+          const cleanJson = result
+            .replace(/```json/g, '')
+            .replace(/```/g, '')
+            .replace(/:\s*\+(\d+)/g, ': $1') // Enlève les "+"
+            .trim();
+          result = JSON.parse(cleanJson);
+        }
+
+        // Vérification structure
+        const newTasks = result.tasks || result;
+        const newNotifs = result.notifications || [];
+
+        if (!Array.isArray(newTasks)) throw new Error("Format invalide (pas de tableau tâches)");
+
+        setTasks(newTasks);
+        setScenarioNotifications(newNotifs);
+
+      } catch (err) {
+        console.error("🚨 Erreur Cuisine IA :", err);
+        setTasks(FALLBACK_TASKS);
+        setScenarioNotifications(FALLBACK_NOTIFS);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchScenario();
   }, []);
-
-  const generateNewScenario = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-scenario', {
-        body: { gameType: 'kitchen-meal' } 
-      });
-      if (error || !data) throw new Error("Erreur IA");
-
-      setTasks(data.tasks);
-      setScenarioNotifications(data.notifications);
-    } catch (err) {
-      console.error("Erreur IA Cuisine, fallback", err);
-      // Fallback manuel si l'IA échoue
-      setTasks([
-        { id: 1, name: "Laver les mains", priority: "high" },
-        { id: 2, name: "Vérifier DLC", priority: "high" },
-        { id: 3, name: "Mixer repas M. Paul", priority: "medium" },
-        { id: 4, name: "Servir Mme Durand", priority: "medium" }
-      ]);
-      setScenarioNotifications(["⚠️ Frigo à 12°C", "🤢 Refus de manger"]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const moveTask = (idx: number, dir: -1 | 1) => {
     if ((idx === 0 && dir === -1) || (idx === tasks.length - 1 && dir === 1)) return;
@@ -520,24 +544,37 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
 
   const startSimulation = () => {
     setPhase('execution');
-    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[0] || "Imprévu 1"]), 2000);
-    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[1] || "Imprévu 2"]), 5000);
+    // Protection : on s'assure que scenarioNotifications existe
+    const notifs = scenarioNotifications || FALLBACK_NOTIFS;
+    
+    setTimeout(() => setNotifications(prev => [...prev, notifs[0] || "Imprévu 1"]), 2000);
+    setTimeout(() => setNotifications(prev => [...prev, notifs[1] || "Imprévu 2"]), 5000);
     setTimeout(() => setPhase('transmission'), 8000);
   };
 
   const analyzeReport = () => {
-    // ... (Logique analyse identique au code précédent) ...
     let feedback = "Analyse IA :\n";
     let score = 0;
-    if (report.length > 20) { feedback += "✅ Bonne longueur.\n"; score += 10; }
-    else feedback += "⚠️ Trop court.\n";
+    const text = report.toLowerCase();
+
+    // Logique simplifiée d'analyse mots-clés
+    if (text.includes("frigo") || text.includes("température") || text.includes("12")) {
+      feedback += "✅ Bien vu : Incident frigo signalé.\n";
+      score += 15;
+    }
+    if (text.length > 20) {
+      feedback += "✅ Bonne précision du rapport.\n";
+      score += 10;
+    } else {
+      feedback += "⚠️ Rapport trop court.\n";
+    }
+
     setAiFeedback(feedback);
-    onUpdateStats({ communication: score, hygiene: 10 });
+    onUpdateStats({ communication: 10, hygiene: score });
     setPhase('feedback');
   };
 
-  // --- RENDU ---
-  if (isLoading) return (
+  if (loading) return (
     <div className="fixed inset-0 z-50 bg-white/90 flex flex-col items-center justify-center">
       <Loader2 className="w-16 h-16 text-[#00aeb7] animate-spin mb-4" />
       <h3 className="text-xl font-bold text-gray-700">L'IA prépare la cuisine...</h3>
@@ -548,23 +585,31 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
     <div className="fixed inset-0 z-50 bg-[#F0F4F8] flex flex-col items-center justify-center p-4">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="bg-[#962588] p-6 text-white flex justify-between items-center">
-          <h2 className="text-2xl font-bold flex items-center gap-2"><ListTodo className="w-6 h-6" /> Service du Repas (Généré par IA)</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2"><ListTodo className="w-6 h-6" /> Service du Repas</h2>
           <button onClick={onClose}><X className="w-6 h-6" /></button>
         </div>
 
         <div className="p-6 flex-grow overflow-y-auto">
           {phase === 'planning' && (
             <div className="space-y-4">
-              <p className="text-gray-600">L'IA a généré cette situation unique. Organisez-vous :</p>
-              {tasks.map((task, idx) => (
-                <div key={task.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
-                  <span className="font-medium text-gray-700">{idx + 1}. {task.name} <span className="text-xs text-gray-400">({task.priority})</span></span>
+              <p className="text-gray-600">Organisez les tâches générées par l'IA :</p>
+              
+              {/* PROTECTION : (tasks || []).map évite le crash si tasks est undefined */}
+              {(tasks || []).map((task, idx) => (
+                <div key={task.id || idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
+                  <span className="font-medium text-gray-700">
+                    {idx + 1}. {task.name} 
+                    <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                      {task.priority || 'Normal'}
+                    </span>
+                  </span>
                   <div className="flex gap-3">
                     <button onClick={() => moveTask(idx, -1)} disabled={idx === 0} className="p-2 rounded-full border border-purple-100 text-[#962588] hover:bg-purple-50"><ChevronUp className="w-5 h-5" /></button>
                     <button onClick={() => moveTask(idx, 1)} disabled={idx === tasks.length - 1} className="p-2 rounded-full border border-purple-100 text-[#962588] hover:bg-purple-50"><ChevronDown className="w-5 h-5" /></button>
                   </div>
                 </div>
               ))}
+              
               <button onClick={startSimulation} className="w-full bg-[#00aeb7] text-white py-3 rounded-xl font-bold mt-4">Lancer le service</button>
             </div>
           )}
@@ -574,7 +619,7 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
               <Loader2 className="w-16 h-16 text-[#00aeb7] animate-spin mx-auto" />
               <h3 className="text-xl font-bold text-gray-700">Service en cours...</h3>
               <div className="space-y-2">
-                {notifications.map((notif, i) => (
+                {(notifications || []).map((notif, i) => (
                   <div key={i} className="bg-red-50 text-red-600 p-3 rounded-lg border border-red-100 flex items-center gap-2 animate-fade-in-up">
                     <Bell className="w-4 h-4" /> {notif}
                   </div>
@@ -593,7 +638,7 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
 
           {phase === 'feedback' && (
             <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-xl text-sm whitespace-pre-line">{aiFeedback}</div>
+              <div className="bg-gray-50 p-4 rounded-xl text-sm whitespace-pre-line border border-gray-200">{aiFeedback}</div>
               <button onClick={onClose} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold">Retour</button>
             </div>
           )}
