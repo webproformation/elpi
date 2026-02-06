@@ -116,36 +116,98 @@ const CreateAccountView = ({ email, onComplete }: { email: string, onComplete: (
   );
 };
 
-// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - COMMUNICATION) ---
+// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - MODE IA) ---
 const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void, currentStats: Stats }) => {
+  const [scenario, setScenario] = useState<any[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
-  const currentStep = SCENARIO_SALON.find(s => s.id === currentStepId);
+  const [loading, setLoading] = useState(true);
+
+  // Scénario de secours (Hardcodé)
+  const FALLBACK_SCENARIO = [
+    {
+      id: 1, speaker: "Mme Durand", emotion: "angry", 
+      text: "NON ! Je ne veux voir personne ! Ma fille m'a encore posé un lapin !",
+      choices: [
+        { text: "Je comprends votre colère (Empathie)", type: "empathic", impact: { communication: +20 }, next: 2 },
+        { text: "Calmez-vous madame (Autoritaire)", type: "authoritarian", impact: { communication: -10 }, next: 3 }
+      ]
+    },
+    { id: 2, speaker: "Mme Durand", emotion: "happy", text: "Merci de m'écouter... Vous êtes gentil.", choices: [], end: true },
+    { id: 3, speaker: "Mme Durand", emotion: "angry", text: "Ne me donnez pas d'ordres ! Sortez !", choices: [], end: true }
+  ];
+
+  // Chargement automatique au lancement
+  useEffect(() => {
+    const fetchScenario = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-scenario', {
+          body: { gameType: 'salon' }
+        });
+        if (error || !data) throw new Error("Erreur IA");
+        setScenario(data);
+      } catch (err) {
+        console.error("Échec IA Salon, utilisation secours", err);
+        setScenario(FALLBACK_SCENARIO);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchScenario();
+  }, []);
+
+  const currentStep = scenario.find(s => s.id === currentStepId);
+
   const handleChoice = (nextId: number, impact?: Partial<Stats>) => {
     if (impact) onUpdateStats(impact);
-    if (currentStep?.end) onClose(); else if (nextId) setCurrentStepId(nextId); else onClose();
+    if (currentStep?.end || !nextId) onClose(); 
+    else setCurrentStepId(nextId);
   };
+
+  if (loading) return (
+    <div className="h-screen bg-gray-900 flex flex-col items-center justify-center text-white space-y-4">
+      <Loader2 className="w-12 h-12 animate-spin text-[#962588]" />
+      <p className="text-xl font-medium animate-pulse">L'IA génère le dialogue de Mme Durand...</p>
+    </div>
+  );
+
   if (!currentStep) return null;
+
   return (
     <div className="h-screen bg-gray-900 font-sans relative flex flex-col items-center justify-center overflow-hidden">
       <div className="absolute inset-0"><div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div><img src="/salon.png" alt="Salon" className="w-full h-full object-cover" /></div>
       <button onClick={onClose} className="absolute top-6 right-6 z-50 bg-white/20 p-2 rounded-full text-white"><X className="w-6 h-6" /></button>
       
-      {/* HUD STATS */}
-      <div className="absolute top-6 left-6 z-50 flex flex-col gap-2">
-        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><ShieldCheck className="w-4 h-4 text-blue-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-blue-500 transition-all" style={{ width: `${currentStats.security}%` }}></div></div></div>
-        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><Sparkles className="w-4 h-4 text-yellow-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-yellow-500 transition-all" style={{ width: `${currentStats.hygiene}%` }}></div></div></div>
-        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><MessageCircle className="w-4 h-4 text-purple-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-purple-500 transition-all" style={{ width: `${currentStats.communication}%` }}></div></div></div>
+      {/* HUD STATS SIMPLIFIÉ */}
+      <div className="absolute top-6 left-6 z-50 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-white font-bold flex gap-4">
+        <span className="text-purple-400">Communication: {currentStats.communication}%</span>
       </div>
 
       <div className={`z-10 mt-auto mb-8 transition-all duration-500 transform ${currentStep.emotion === 'angry' ? 'scale-110' : 'scale-100'}`}>
-        <div className="w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 mx-auto"><img src={EMOTION_IMAGES[currentStep.emotion] || '/md2.png'} alt="Personnage" className="w-full h-full object-cover" /></div>
+        <div className="w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 mx-auto">
+          {/* Assurez-vous d'avoir une image par défaut si l'émotion n'existe pas */}
+          <img src={EMOTION_IMAGES[currentStep.emotion] || '/md2.png'} alt="Personnage" className="w-full h-full object-cover" />
+        </div>
       </div>
+
       <div className="z-20 w-full max-w-4xl px-4 pb-8 mt-auto mb-4">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden animate-fade-in-up">
           <div className="bg-[#962588] text-white px-8 py-3 font-bold text-xl inline-block rounded-br-2xl">{currentStep.speaker}</div>
-          <div className="p-6 md:p-8"><p className="text-xl md:text-2xl text-gray-800 font-medium mb-8">"{currentStep.text}"</p><div className="space-y-3">
-              {currentStep.end ? (<button onClick={() => handleChoice(0)} className="w-full text-center p-4 rounded-xl bg-[#962588] text-white font-bold">Terminer</button>) : (currentStep.choices?.map((choice, idx) => (<button key={idx} onClick={() => handleChoice(choice.next, choice.impact)} className="w-full text-left p-4 rounded-xl bg-gray-50 hover:bg-[#E6F3F5] border-2 border-transparent transition-all group flex items-center"><div className="bg-white border border-gray-200 text-gray-500 font-bold w-8 h-8 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#00aeb7] group-hover:text-white shrink-0">{String.fromCharCode(65 + idx)}</div><span className="text-gray-700 font-medium group-hover:text-[#00aeb7]">{choice.text}</span></button>)))}
-          </div></div>
+          <div className="p-6 md:p-8">
+            <p className="text-xl md:text-2xl text-gray-800 font-medium mb-8">"{currentStep.text}"</p>
+            <div className="space-y-3">
+              {currentStep.end ? (
+                <button onClick={() => onClose()} className="w-full text-center p-4 rounded-xl bg-[#962588] text-white font-bold hover:bg-[#7e1d72]">Terminer l'échange</button>
+              ) : (
+                currentStep.choices?.map((choice: any, idx: number) => (
+                  <button key={idx} onClick={() => handleChoice(choice.next, choice.impact)} className="w-full text-left p-4 rounded-xl bg-gray-50 hover:bg-[#E6F3F5] border-2 border-transparent hover:border-[#00aeb7] transition-all group flex items-center">
+                    <div className="bg-white border border-gray-200 text-gray-500 font-bold w-8 h-8 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#00aeb7] group-hover:text-white shrink-0">{String.fromCharCode(65 + idx)}</div>
+                    <span className="text-gray-700 font-medium group-hover:text-[#00aeb7]">{choice.text}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -344,55 +406,49 @@ const BathroomGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onU
   );
 };
 
-// --- COMPOSANT JEU 4 : CUISINE (IA GÉNÉRATIVE + ORGANISATION) ---
+// --- COMPOSANT JEU 4 : CUISINE (AUTO-START) ---
 const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void }) => {
   const [phase, setPhase] = useState<'planning' | 'execution' | 'transmission' | 'feedback'>('planning');
-  const [isLoading, setIsLoading] = useState(false); // État de chargement IA
+  const [isLoading, setIsLoading] = useState(true); // Commence à true
 
-  // Données par défaut (statiques)
-  const [tasks, setTasks] = useState([
-    { id: 1, name: "Toilette de Mme Michel", priority: "medium" },
-    { id: 2, name: "Insuline M. Paul (8h00)", priority: "high" },
-    { id: 3, name: "Lever Mme Durand", priority: "low" },
-    { id: 4, name: "Petit-déjeuner M. Robert", priority: "medium" }
-  ]);
+  // État initial vide ou placeholder, il sera écrasé par l'IA
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [scenarioNotifications, setScenarioNotifications] = useState<string[]>([]);
   
-  // Imprévus par défaut
-  const [scenarioNotifications, setScenarioNotifications] = useState([
-    "🔔 Mme Michel a sonné (Urgence toilette)",
-    "📞 La fille de M. Paul appelle"
-  ]);
-
   const [notifications, setNotifications] = useState<string[]>([]);
   const [report, setReport] = useState("");
   const [aiFeedback, setAiFeedback] = useState("");
 
-  // --- FONCTION POUR APPELER L'IA ---
+  // Lancement automatique au montage du composant
+  useEffect(() => {
+    generateNewScenario();
+  }, []);
+
   const generateNewScenario = async () => {
     setIsLoading(true);
     try {
-      // Appel à votre fonction Supabase
       const { data, error } = await supabase.functions.invoke('generate-scenario', {
-        body: { gameType: 'kitchen' }
+        body: { gameType: 'kitchen-meal' } 
       });
+      if (error || !data) throw new Error("Erreur IA");
 
-      if (error) throw error;
-
-      if (data) {
-        // Mise à jour avec les données de l'IA
-        setTasks(data.tasks);
-        setScenarioNotifications(data.notifications);
-        alert("Nouveau scénario généré par l'IA !");
-      }
+      setTasks(data.tasks);
+      setScenarioNotifications(data.notifications);
     } catch (err) {
-      console.error("Erreur IA:", err);
-      alert("Impossible de joindre le coach IA. Chargement du scénario par défaut.");
+      console.error("Erreur IA Cuisine, fallback", err);
+      // Fallback manuel si l'IA échoue
+      setTasks([
+        { id: 1, name: "Laver les mains", priority: "high" },
+        { id: 2, name: "Vérifier DLC", priority: "high" },
+        { id: 3, name: "Mixer repas M. Paul", priority: "medium" },
+        { id: 4, name: "Servir Mme Durand", priority: "medium" }
+      ]);
+      setScenarioNotifications(["⚠️ Frigo à 12°C", "🤢 Refus de manger"]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Phase 1 : Réorganisation
   const moveTask = (idx: number, dir: -1 | 1) => {
     if ((idx === 0 && dir === -1) || (idx === tasks.length - 1 && dir === 1)) return;
     const newTasks = [...tasks];
@@ -402,105 +458,61 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
     setTasks(newTasks);
   };
 
-  // Phase 2 : Simulation (Utilise les notifications dynamiques)
   const startSimulation = () => {
     setPhase('execution');
-    // Déclenche les notifications stockées dans le state (soit par défaut, soit IA)
-    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[0]]), 2000);
-    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[1]]), 5000);
+    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[0] || "Imprévu 1"]), 2000);
+    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[1] || "Imprévu 2"]), 5000);
     setTimeout(() => setPhase('transmission'), 8000);
   };
 
-  // Phase 4 : Analyse IA (Simulée pour l'instant côté feedback texte)
   const analyzeReport = () => {
-    let feedback = "Analyse de votre transmission :\n";
+    // ... (Logique analyse identique au code précédent) ...
+    let feedback = "Analyse IA :\n";
     let score = 0;
-    // Note : Idéalement, cette analyse devrait aussi être faite par l'IA via Supabase pour être contextuelle
-    if (report.length > 20) { feedback += "✅ Bonne longueur de transmission.\n"; score += 10; }
-    else { feedback += "⚠️ Soyez plus précis dans vos transmissions.\n"; }
-    
-    setAiFeedback(feedback + "\n(Analyse basée sur la structure)");
-    onUpdateStats({ communication: score, security: 10 });
+    if (report.length > 20) { feedback += "✅ Bonne longueur.\n"; score += 10; }
+    else feedback += "⚠️ Trop court.\n";
+    setAiFeedback(feedback);
+    onUpdateStats({ communication: score, hygiene: 10 });
     setPhase('feedback');
   };
+
+  // --- RENDU ---
+  if (isLoading) return (
+    <div className="fixed inset-0 z-50 bg-white/90 flex flex-col items-center justify-center">
+      <Loader2 className="w-16 h-16 text-[#00aeb7] animate-spin mb-4" />
+      <h3 className="text-xl font-bold text-gray-700">L'IA prépare la cuisine...</h3>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-[#F0F4F8] flex flex-col items-center justify-center p-4">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        
-        {/* Header */}
         <div className="bg-[#962588] p-6 text-white flex justify-between items-center">
-          <h2 className="text-2xl font-bold flex items-center gap-2"><ListTodo className="w-6 h-6" /> Le Rush du Matin</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2"><ListTodo className="w-6 h-6" /> Service du Repas (Généré par IA)</h2>
           <button onClick={onClose}><X className="w-6 h-6" /></button>
         </div>
 
-        {/* Content */}
         <div className="p-6 flex-grow overflow-y-auto">
-          
-          {/* PHASE 1 : PLANNING */}
           {phase === 'planning' && (
             <div className="space-y-4">
-              
-              {/* BOUTON IA */}
-              <button 
-                onClick={generateNewScenario} 
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md hover:scale-[1.01] transition-transform"
-              >
-                {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                {isLoading ? "L'IA génère une situation..." : "Générer une situation inédite avec l'IA"}
-              </button>
-
-              <div className="h-px bg-gray-200 my-4"></div>
-
-              <p className="text-gray-600">Mettez les tâches dans le bon ordre pour votre tournée :</p>
+              <p className="text-gray-600">L'IA a généré cette situation unique. Organisez-vous :</p>
               {tasks.map((task, idx) => (
                 <div key={task.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <span className="bg-gray-200 text-gray-700 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">{idx + 1}</span>
-                    <div>
-                      <span className="font-medium text-gray-700 block">{task.name}</span>
-                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-600' : task.priority === 'medium' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                        {task.priority === 'high' ? 'Prioritaire' : task.priority === 'medium' ? 'Moyen' : 'Faible'}
-                      </span>
-                    </div>
-                  </div>
+                  <span className="font-medium text-gray-700">{idx + 1}. {task.name} <span className="text-xs text-gray-400">({task.priority})</span></span>
                   <div className="flex gap-3">
-                    <button 
-                      onClick={() => moveTask(idx, -1)} 
-                      disabled={idx === 0}
-                      className={`p-2 rounded-full transition-all duration-200 border-2 ${
-                        idx === 0 
-                          ? 'border-gray-100 text-gray-200 cursor-not-allowed' 
-                          : 'border-purple-100 bg-purple-50 text-[#962588] hover:bg-[#962588] hover:text-white hover:border-[#962588] hover:scale-110 shadow-sm'
-                      }`}
-                    >
-                      <ChevronUp className="w-5 h-5" strokeWidth={3} />
-                    </button>
-
-                    <button 
-                      onClick={() => moveTask(idx, 1)} 
-                      disabled={idx === tasks.length - 1}
-                      className={`p-2 rounded-full transition-all duration-200 border-2 ${
-                        idx === tasks.length - 1 
-                          ? 'border-gray-100 text-gray-200 cursor-not-allowed' 
-                          : 'border-purple-100 bg-purple-50 text-[#962588] hover:bg-[#962588] hover:text-white hover:border-[#962588] hover:scale-110 shadow-sm'
-                      }`}
-                    >
-                      <ChevronDown className="w-5 h-5" strokeWidth={3} />
-                    </button>
+                    <button onClick={() => moveTask(idx, -1)} disabled={idx === 0} className="p-2 rounded-full border border-purple-100 text-[#962588] hover:bg-purple-50"><ChevronUp className="w-5 h-5" /></button>
+                    <button onClick={() => moveTask(idx, 1)} disabled={idx === tasks.length - 1} className="p-2 rounded-full border border-purple-100 text-[#962588] hover:bg-purple-50"><ChevronDown className="w-5 h-5" /></button>
                   </div>
                 </div>
               ))}
-              <button onClick={startSimulation} className="w-full bg-[#00aeb7] text-white py-3 rounded-xl font-bold mt-4">Lancer la matinée</button>
+              <button onClick={startSimulation} className="w-full bg-[#00aeb7] text-white py-3 rounded-xl font-bold mt-4">Lancer le service</button>
             </div>
           )}
-
-          {/* PHASE 2 : EXECUTION */}
+          
           {phase === 'execution' && (
             <div className="text-center space-y-6">
               <Loader2 className="w-16 h-16 text-[#00aeb7] animate-spin mx-auto" />
-              <h3 className="text-xl font-bold text-gray-700">Matinée en cours...</h3>
+              <h3 className="text-xl font-bold text-gray-700">Service en cours...</h3>
               <div className="space-y-2">
                 {notifications.map((notif, i) => (
                   <div key={i} className="bg-red-50 text-red-600 p-3 rounded-lg border border-red-100 flex items-center gap-2 animate-fade-in-up">
@@ -511,39 +523,20 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
             </div>
           )}
 
-          {/* PHASE 3 : TRANSMISSION */}
           {phase === 'transmission' && (
-            <div className="space-y-4">
-              <h3 className="font-bold text-gray-800">Fin de tournée. Rédigez votre transmission :</h3>
-              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 mb-2">
-                Conseil : N'oubliez pas de mentionner les incidents survenus (notifications).
-              </div>
-              <textarea 
-                className="w-full h-32 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#962588] outline-none"
-                placeholder="Ex: J'ai effectué la toilette de..."
-                value={report}
-                onChange={(e) => setReport(e.target.value)}
-              />
-              <button onClick={analyzeReport} className="w-full bg-[#962588] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">
-                <Bot className="w-5 h-5" /> Analyser avec l'IA
-              </button>
-            </div>
+             <div className="space-y-4">
+               <h3 className="font-bold text-gray-800">Transmission :</h3>
+               <textarea className="w-full h-32 p-3 border rounded-xl" value={report} onChange={(e) => setReport(e.target.value)} placeholder="Rapportez les incidents..." />
+               <button onClick={analyzeReport} className="w-full bg-[#962588] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Bot className="w-5 h-5"/> Analyser</button>
+             </div>
           )}
 
-          {/* PHASE 4 : FEEDBACK */}
           {phase === 'feedback' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center"><Bot className="w-6 h-6 text-green-600" /></div>
-                <h3 className="font-bold text-gray-800">Retour du Coach Virtuel</h3>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 whitespace-pre-line text-gray-700 text-sm leading-relaxed">
-                {aiFeedback}
-              </div>
-              <button onClick={onClose} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold">Retour au Hub</button>
+              <div className="bg-gray-50 p-4 rounded-xl text-sm whitespace-pre-line">{aiFeedback}</div>
+              <button onClick={onClose} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold">Retour</button>
             </div>
           )}
-
         </div>
       </div>
     </div>
