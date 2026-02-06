@@ -23,9 +23,25 @@ type Stats = {
   communication: number; // Communication 💬
 };
 
-// --- CONFIGURATION SCÉNARIO SALON (Communication) ---
+// --- CONFIGURATION SCÉNARIO SALON (AVEC VOS NOUVELLES IMAGES) ---
 const EMOTION_IMAGES: Record<string, string> = {
-  happy: '/md1.png', neutral: '/md2.png', angry: '/md3.png', sad: '/md4.png'
+  // --- VOS 4 IMAGES DE BASE ---
+  happy: '/md1.png',    // Souriante
+  neutral: '/md2.png',  // Neutre
+  angry: '/md3.png',    // Fâchée
+  sad: '/md4.png',      // Triste
+
+  // --- VOS 3 NOUVELLES IMAGES ---
+  // (Adaptez les noms ci-dessous si vos fichiers s'appellent autrement)
+  confused: '/md_confused.png',   // Confuse
+  anxious: '/md_anxious.png',     // Anxieuse
+  nostalgic: '/md_nostalgic.png', // Nostalgique
+
+  // --- Alias supplémentaires (au cas où l'IA utilise des synonymes) ---
+  joyful: '/md1.png',    // Synonyme de happy
+  calm: '/md2.png',      // Synonyme de neutral
+  agitated: '/md3.png',  // Synonyme de angry
+  fearful: '/md_anxious.png' // Synonyme de anxious
 };
 
 // --- COMPOSANT 1 : LANDING PAGE ---
@@ -84,40 +100,61 @@ const CreateAccountView = ({ email, onComplete }: { email: string, onComplete: (
   );
 };
 
-// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - UI CORRIGÉE) ---
+// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - CORRIGÉ) ---
 const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void, currentStats: Stats }) => {
   const [scenario, setScenario] = useState<any[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [isFallback, setIsFallback] = useState(false); // Pour savoir si on est en mode secours
+  const [isFallback, setIsFallback] = useState(false);
 
-  // Scénario de secours (Amélioré un peu en attendant les crédits)
+  // Scénario de secours (Au cas où)
   const FALLBACK_SCENARIO = [
     {
       id: 1, speaker: "Mme Durand", emotion: "sad", 
-      text: "(Regarde par la fenêtre) Ils m'ont oublié... Personne ne vient me chercher. Je suis abandonnée ici.",
+      text: "Je me sens seule... Personne ne vient me voir.",
       choices: [
-        { text: "Mais non, je suis là moi. Vous n'êtes pas seule.", type: "empathic", impact: { communication: +10 }, next: 2 },
-        { text: "Cessez de dire des bêtises, votre fille vient dimanche.", type: "authoritarian", impact: { communication: -10 }, next: 3 },
-        { text: "Regardez la télé, ça vous changera les idées.", type: "avoidant", impact: { communication: -5 }, next: 3 }
+        { text: "Je suis là avec vous. (Empathie)", type: "empathic", impact: { communication: +10 }, next: 2 },
+        { text: "Regardez la télé. (Évitement)", type: "avoidant", impact: { communication: -5 }, next: 3 }
       ]
     },
-    { id: 2, speaker: "Mme Durand", emotion: "happy", text: "C'est gentil... Vous restez un peu avec moi ?", choices: [], end: true },
-    { id: 3, speaker: "Mme Durand", emotion: "angry", text: "Vous ne comprenez rien ! Laissez-moi tranquille !", choices: [], end: true }
+    { id: 2, speaker: "Mme Durand", emotion: "happy", text: "Merci, votre présence me rassure.", choices: [], end: true },
+    { id: 3, speaker: "Mme Durand", emotion: "neutral", text: "Mouais... Pas très utile.", choices: [], end: true }
   ];
 
   useEffect(() => {
     const fetchScenario = async () => {
       setLoading(true);
       try {
+        console.log("🤖 Demande scénario Salon...");
         const { data, error } = await supabase.functions.invoke('generate-scenario', {
           body: { gameType: 'salon' }
         });
-        if (error || !data) throw new Error("Erreur IA");
-        setScenario(data);
+
+        if (error) throw error;
+        
+        let finalScenario = data;
+
+        // --- CORRECTION CRITIQUE : Parsing manuel si reçu en texte ---
+        if (typeof finalScenario === 'string') {
+          try {
+            finalScenario = JSON.parse(finalScenario);
+          } catch (e) {
+            console.error("Erreur de parsing manuel du JSON", e);
+            throw new Error("Format reçu illisible");
+          }
+        }
+
+        // Vérification finale du format tableau
+        if (!Array.isArray(finalScenario)) {
+          throw new Error("L'IA n'a pas renvoyé une liste d'étapes (Tableau []).");
+        }
+
+        console.log("✅ Scénario chargé avec succès :", finalScenario);
+        setScenario(finalScenario);
         setIsFallback(false);
+
       } catch (err) {
-        console.error("Échec IA Salon, utilisation secours", err);
+        console.error("🚨 Erreur chargement IA :", err);
         setScenario(FALLBACK_SCENARIO);
         setIsFallback(true);
       } finally {
@@ -129,56 +166,66 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
 
   const currentStep = scenario.find(s => s.id === currentStepId);
 
+  // Sécurité anti-crash si l'étape est introuvable
+  if (!loading && !currentStep && scenario.length > 0) {
+     return (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center text-white">
+           <div className="bg-white text-gray-800 p-6 rounded-xl">
+              <h3>Fin de la simulation</h3>
+              <button onClick={onClose} className="mt-4 bg-[#962588] text-white px-4 py-2 rounded">Retour</button>
+           </div>
+        </div>
+     );
+  }
+
   const handleChoice = (nextId: number, impact?: Partial<Stats>) => {
     if (impact) onUpdateStats(impact);
-    if (currentStep?.end || !nextId) onClose(); 
-    else setCurrentStepId(nextId);
+    // Si nextId vaut 0 ou n'existe pas, on considère que c'est la fin
+    if (!nextId || currentStep?.end) {
+        onClose();
+    } else {
+        setCurrentStepId(nextId);
+    }
   };
 
   if (loading) return (
     <div className="h-screen bg-gray-900 flex flex-col items-center justify-center text-white space-y-4">
       <Loader2 className="w-12 h-12 animate-spin text-[#962588]" />
-      <p className="text-xl font-medium animate-pulse">L'IA analyse le dossier patient...</p>
+      <p className="text-xl font-medium animate-pulse">L'IA génère le dialogue de Mme Durand...</p>
     </div>
   );
-
-  if (!currentStep) return null;
 
   return (
     <div className="h-screen bg-gray-900 font-sans relative flex flex-col items-center justify-center overflow-hidden">
       <div className="absolute inset-0"><div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div><img src="/salon.png" alt="Salon" className="w-full h-full object-cover" /></div>
       <button onClick={onClose} className="absolute top-6 right-6 z-50 bg-white/20 p-2 rounded-full text-white"><X className="w-6 h-6" /></button>
       
-      {/* HUD STATS COMPLET */}
+      {/* HUD STATS */}
       <div className="absolute top-6 left-6 z-50 flex flex-col gap-2">
         <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><ShieldCheck className="w-4 h-4 text-blue-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-blue-500 transition-all" style={{ width: `${currentStats.security}%` }}></div></div></div>
         <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><Sparkles className="w-4 h-4 text-yellow-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-yellow-500 transition-all" style={{ width: `${currentStats.hygiene}%` }}></div></div></div>
         <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><MessageCircle className="w-4 h-4 text-purple-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-purple-500 transition-all" style={{ width: `${currentStats.communication}%` }}></div></div></div>
       </div>
 
-      {/* Indication Mode Dégradé (si pas de crédit IA) */}
-      {isFallback && (
-        <div className="absolute bottom-4 left-4 z-50 bg-red-500/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-          ⚠️ Mode hors-ligne (IA indisponible)
-        </div>
-      )}
+      {isFallback && <div className="absolute bottom-4 left-4 z-50 bg-red-500 text-white text-xs px-2 py-1 rounded">Mode hors-ligne</div>}
 
-      <div className={`z-10 mt-auto mb-8 transition-all duration-500 transform ${currentStep.emotion === 'angry' ? 'scale-110' : 'scale-100'}`}>
+      <div className={`z-10 mt-auto mb-8 transition-all duration-500 transform ${currentStep?.emotion === 'angry' ? 'scale-110' : 'scale-100'}`}>
         <div className="w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 mx-auto">
-          <img src={EMOTION_IMAGES[currentStep.emotion] || '/md2.png'} alt="Personnage" className="w-full h-full object-cover" />
+          {/* Mapping intelligent des émotions IA vers vos images */}
+          <img src={EMOTION_IMAGES[currentStep?.emotion?.toLowerCase()] || '/md2.png'} alt="Personnage" className="w-full h-full object-cover" />
         </div>
       </div>
 
       <div className="z-20 w-full max-w-4xl px-4 pb-8 mt-auto mb-4">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden animate-fade-in-up">
-          <div className="bg-[#962588] text-white px-8 py-3 font-bold text-xl inline-block rounded-br-2xl">{currentStep.speaker}</div>
+          <div className="bg-[#962588] text-white px-8 py-3 font-bold text-xl inline-block rounded-br-2xl">{currentStep?.speaker || "Mme Durand"}</div>
           <div className="p-6 md:p-8">
-            <p className="text-xl md:text-2xl text-gray-800 font-medium mb-8">"{currentStep.text}"</p>
+            <p className="text-xl md:text-2xl text-gray-800 font-medium mb-8">"{currentStep?.text}"</p>
             <div className="space-y-3">
-              {currentStep.end ? (
+              {(!currentStep?.choices || currentStep.choices.length === 0) ? (
                 <button onClick={() => onClose()} className="w-full text-center p-4 rounded-xl bg-[#962588] text-white font-bold hover:bg-[#7e1d72]">Terminer l'échange</button>
               ) : (
-                currentStep.choices?.map((choice: any, idx: number) => (
+                currentStep.choices.map((choice: any, idx: number) => (
                   <button key={idx} onClick={() => handleChoice(choice.next, choice.impact)} className="w-full text-left p-4 rounded-xl bg-gray-50 hover:bg-[#E6F3F5] border-2 border-transparent hover:border-[#00aeb7] transition-all group flex items-center">
                     <div className="bg-white border border-gray-200 text-gray-500 font-bold w-8 h-8 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#00aeb7] group-hover:text-white shrink-0">{String.fromCharCode(65 + idx)}</div>
                     <span className="text-gray-700 font-medium group-hover:text-[#00aeb7]">{choice.text}</span>
