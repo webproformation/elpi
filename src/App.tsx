@@ -100,14 +100,35 @@ const CreateAccountView = ({ email, onComplete }: { email: string, onComplete: (
   );
 };
 
-// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - CORRIGÉ) ---
+// --- CONFIGURATION SCÉNARIO SALON (AVEC VOS IMAGES) ---
+const EMOTION_IMAGES: Record<string, string> = {
+  // Vos images de base
+  happy: '/md1.png', 
+  neutral: '/md2.png', 
+  angry: '/md3.png', 
+  sad: '/md4.png',
+
+  // VOS NOUVELLES IMAGES (Assurez-vous qu'elles sont dans le dossier public)
+  confused: '/md_confused.png', 
+  anxious: '/md_anxious.png', 
+  nostalgic: '/md_nostalgic.png',
+
+  // Alias pour l'IA (synonymes)
+  joyful: '/md1.png', 
+  calm: '/md2.png', 
+  agitated: '/md3.png', 
+  fearful: '/md_anxious.png',
+  thinking: '/md_confused.png'
+};
+
+// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - FINAL) ---
 const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void, currentStats: Stats }) => {
   const [scenario, setScenario] = useState<any[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
   const [loading, setLoading] = useState(true);
   const [isFallback, setIsFallback] = useState(false);
 
-  // Scénario de secours (Au cas où)
+  // Scénario de secours
   const FALLBACK_SCENARIO = [
     {
       id: 1, speaker: "Mme Durand", emotion: "sad", 
@@ -125,36 +146,49 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
     const fetchScenario = async () => {
       setLoading(true);
       try {
-        console.log("🤖 Demande scénario Salon...");
+        console.log("🤖 Demande scénario Salon envoyée...");
         const { data, error } = await supabase.functions.invoke('generate-scenario', {
           body: { gameType: 'salon' }
         });
 
-        if (error) throw error;
-        
+        // 1. Vérification erreur réseau Supabase
+        if (error) {
+          console.error("❌ Erreur Supabase invoke:", error);
+          throw error;
+        }
+
+        // 2. Vérification donnée vide
+        if (!data) {
+          throw new Error("L'IA a renvoyé une donnée vide.");
+        }
+
         let finalScenario = data;
 
-        // --- CORRECTION CRITIQUE : Parsing manuel si reçu en texte ---
+        // 3. Parsing manuel si l'IA a renvoyé du texte (string)
         if (typeof finalScenario === 'string') {
+          console.log("⚠️ Reçu comme texte, tentative de parsing JSON...");
           try {
-            finalScenario = JSON.parse(finalScenario);
+            // Nettoyage éventuel si l'IA a mis des ```json au début
+            const cleanJson = finalScenario.replace(/```json/g, '').replace(/```/g, '').trim();
+            finalScenario = JSON.parse(cleanJson);
           } catch (e) {
-            console.error("Erreur de parsing manuel du JSON", e);
-            throw new Error("Format reçu illisible");
+            console.error("❌ Échec du parsing JSON. Contenu reçu :", finalScenario);
+            throw new Error("Format JSON illisible");
           }
         }
 
-        // Vérification finale du format tableau
+        // 4. Vérification finale du format (Doit être un Tableau)
         if (!Array.isArray(finalScenario)) {
-          throw new Error("L'IA n'a pas renvoyé une liste d'étapes (Tableau []).");
+          console.error("❌ Format invalide (Pas un tableau) :", finalScenario);
+          throw new Error("L'IA n'a pas renvoyé une liste d'étapes.");
         }
 
-        console.log("✅ Scénario chargé avec succès :", finalScenario);
+        console.log("✅ Scénario chargé et valide :", finalScenario);
         setScenario(finalScenario);
         setIsFallback(false);
 
       } catch (err) {
-        console.error("🚨 Erreur chargement IA :", err);
+        console.error("🚨 ERREUR CRITIQUE CHARGEMENT IA :", err);
         setScenario(FALLBACK_SCENARIO);
         setIsFallback(true);
       } finally {
@@ -166,21 +200,9 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
 
   const currentStep = scenario.find(s => s.id === currentStepId);
 
-  // Sécurité anti-crash si l'étape est introuvable
-  if (!loading && !currentStep && scenario.length > 0) {
-     return (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center text-white">
-           <div className="bg-white text-gray-800 p-6 rounded-xl">
-              <h3>Fin de la simulation</h3>
-              <button onClick={onClose} className="mt-4 bg-[#962588] text-white px-4 py-2 rounded">Retour</button>
-           </div>
-        </div>
-     );
-  }
-
+  // Gestion Fin de jeu
   const handleChoice = (nextId: number, impact?: Partial<Stats>) => {
     if (impact) onUpdateStats(impact);
-    // Si nextId vaut 0 ou n'existe pas, on considère que c'est la fin
     if (!nextId || currentStep?.end) {
         onClose();
     } else {
@@ -188,13 +210,20 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
     }
   };
 
+  // Affichage Chargement
   if (loading) return (
     <div className="h-screen bg-gray-900 flex flex-col items-center justify-center text-white space-y-4">
       <Loader2 className="w-12 h-12 animate-spin text-[#962588]" />
-      <p className="text-xl font-medium animate-pulse">L'IA génère le dialogue de Mme Durand...</p>
+      <p className="text-xl font-medium animate-pulse">L'IA génère le dialogue...</p>
     </div>
   );
 
+  // Affichage Erreur critique (si fallback échoue aussi)
+  if (!loading && !currentStep && scenario.length > 0) {
+     return <div className="fixed inset-0 bg-black text-white p-10">Erreur d'affichage étape {currentStepId}</div>;
+  }
+
+  // --- RENDU UI ---
   return (
     <div className="h-screen bg-gray-900 font-sans relative flex flex-col items-center justify-center overflow-hidden">
       <div className="absolute inset-0"><div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div><img src="/salon.png" alt="Salon" className="w-full h-full object-cover" /></div>
@@ -207,12 +236,17 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
         <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><MessageCircle className="w-4 h-4 text-purple-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-purple-500 transition-all" style={{ width: `${currentStats.communication}%` }}></div></div></div>
       </div>
 
-      {isFallback && <div className="absolute bottom-4 left-4 z-50 bg-red-500 text-white text-xs px-2 py-1 rounded">Mode hors-ligne</div>}
+      {isFallback && <div className="absolute bottom-4 left-4 z-50 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg animate-pulse">⚠️ Mode hors-ligne (IA indisponible)</div>}
 
       <div className={`z-10 mt-auto mb-8 transition-all duration-500 transform ${currentStep?.emotion === 'angry' ? 'scale-110' : 'scale-100'}`}>
-        <div className="w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 mx-auto">
-          {/* Mapping intelligent des émotions IA vers vos images */}
-          <img src={EMOTION_IMAGES[currentStep?.emotion?.toLowerCase()] || '/md2.png'} alt="Personnage" className="w-full h-full object-cover" />
+        <div className="w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 mx-auto bg-white">
+          {/* IMAGE DYNAMIQUE */}
+          <img 
+            src={EMOTION_IMAGES[currentStep?.emotion?.toLowerCase()] || '/md2.png'} 
+            onError={(e) => { e.currentTarget.src = '/md2.png'; }} // Fallback si l'image n'existe pas
+            alt="Personnage" 
+            className="w-full h-full object-cover" 
+          />
         </div>
       </div>
 
