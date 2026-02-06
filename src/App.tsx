@@ -28,6 +28,7 @@ const EMOTION_IMAGES: Record<string, string> = {
   happy: '/md1.png', neutral: '/md2.png', angry: '/md3.png', sad: '/md4.png'
 };
 
+// --- À SUPPRIMER ENTIÈREMENT ---
 const SCENARIO_SALON = [
   {
     id: 1, speaker: "Mme Durand", emotion: "angry", 
@@ -59,6 +60,7 @@ const SCENARIO_SALON = [
   { id: 5, speaker: "Mme Durand", emotion: "neutral", text: "Bon... Allons-y.", choices: [], end: true },
   { id: 6, speaker: "Mme Durand", emotion: "happy", text: "Merci de m'écouter. Ça me donne un peu de courage. On peut y aller.", choices: [], end: true }
 ];
+// --------------------------------
 
 // --- COMPOSANT 1 : LANDING PAGE ---
 const LandingView = ({ onSuccess }: { onSuccess: (email: string) => void }) => {
