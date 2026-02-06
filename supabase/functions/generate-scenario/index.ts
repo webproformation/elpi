@@ -9,90 +9,91 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  // Gestion CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
   try {
-    if (!OPENAI_API_KEY) throw new Error("Clé OpenAI manquante");
-
     const { gameType } = await req.json();
+
     let systemPrompt = "";
     let userPrompt = "";
 
-    // --- CAS 1 : SALON (NOUVEAU) ---
-    // --- CAS 1 : SALON (SCÉNARIO COMPLEXE & PSYCHOLOGIQUE) ---
+    // CONFIGURATION DES PROMPTS
     if (gameType === 'salon') {
-      systemPrompt = `Tu es un expert en psychogériatrie et formateur EHPAD.
-      Génère un scénario de simulation de dialogue difficile et réaliste.
+      systemPrompt = `Tu es un expert en psychogériatrie.
+      Génère un scénario de dialogue difficile avec un patient (Mme Durand).
+      RÈGLES CRITIQUES JSON :
+      1. Renvoie UNIQUEMENT un tableau JSON valide [ ... ].
+      2. NE METS JAMAIS de signe "+" devant les nombres positifs (Interdit : "+10", Obligatoire : "10").
+      3. Structure : [{ "id": 1, "text": "...", "choices": [{ "impact": {"communication": 10} }] }]`;
       
-      CONTEXTE :
-      - Le patient (Mme Durand) souffre de troubles cognitifs (début Alzheimer ou anxiété sévère).
-      - Elle ne doit PAS être juste "méchante". Elle doit être confuse, anxieuse, ou délirante.
-      - Le soignant doit trouver la bonne posture (validation, diversion, empathie).
-      
-      RÈGLES DU JSON :
-      - Génère une conversation en 3 ou 4 étapes minimum.
-      - Les choix ne doivent pas être caricaturaux (pas de "Je te frappe" vs "Je t'aime"). Fais des nuances subtiles.
-      - "type": "empathic" (bonne réponse), "authoritarian" (mauvaise), "avoidant" (mitigé).
-      
-      Structure JSON stricte :
-      [
-        {
-          "id": 1,
-          "speaker": "Mme Durand",
-          "emotion": "sad", 
-          "text": "Je veux rentrer chez moi... Ma mère m'attend pour le dîner (délire : sa mère est décédée).",
-          "choices": [
-            { "text": "Mais Madame, votre mère est morte depuis 20 ans ! (Confrontation)", "type": "authoritarian", "impact": {"communication": -20}, "next": 2 },
-            { "text": "C'est vrai ? Elle cuisinait quoi de bon votre maman ? (Diversion/Empathie)", "type": "empathic", "impact": {"communication": +15}, "next": 3 }
-          ]
-        },
-        ... (suite logique des réactions)
-      ]`;
-      
-      // On demande une situation aléatoire à chaque fois
       const situations = [
-        "Mme Durand cherche un objet imaginaire qu'on lui a 'volé'.",
-        "Mme Durand refuse sa toilette car elle pense qu'elle l'a déjà faite.",
-        "Mme Durand pleure car elle ne reconnait pas sa chambre.",
-        "Mme Durand veut aller prendre son bus pour le travail (elle est retraitée)."
+        "Mme Durand cherche son chat imaginaire.",
+        "Mme Durand refuse sa toilette.",
+        "Mme Durand veut aller travailler (alors qu'elle est retraitée).",
+        "Mme Durand pense qu'on lui a volé ses bijoux."
       ];
-      userPrompt = `Génère un scénario unique basé sur cette situation : ${situations[Math.floor(Math.random() * situations.length)]}`;
-    } 
-    // --- CAS 2 : CUISINE REPAS ---
-    else if (gameType === 'kitchen-meal') {
-       systemPrompt = `Tu es expert HACCP. Génère un JSON strict : { "tasks": [{"id":1, "name":"...", "priority":"high"}...], "notifications": ["..."] }`;
-       userPrompt = "Génère un scénario de service de repas avec risques hygiène.";
+      userPrompt = `Situation : ${situations[Math.floor(Math.random() * situations.length)]}`;
+    } else {
+      // Par défaut (Cuisine)
+      systemPrompt = `Tu es expert HACCP. Génère un JSON strict sans signe "+" devant les nombres.`;
+      userPrompt = "Scénario cuisine hygiène.";
     }
 
-    // Appel OpenAI
+    // APPEL OPENAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
         temperature: 0.7,
       }),
     });
 
     const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
     
-    // Parsing sécurisé
-    let content = data.choices[0].message.content;
-    // Nettoyage au cas où l'IA ajoute du texte autour du JSON
-    const jsonStart = content.indexOf('[');
-    const jsonStartObj = content.indexOf('{');
-    const start = (jsonStart !== -1 && (jsonStart < jsonStartObj || jsonStartObj === -1)) ? jsonStart : jsonStartObj;
-    if (start !== -1) content = content.substring(start);
-    const lastBracket = content.lastIndexOf(']');
-    const lastBrace = content.lastIndexOf('}');
-    const end = (lastBracket > lastBrace) ? lastBracket : lastBrace;
-    if (end !== -1) content = content.substring(0, end + 1);
+    // GESTION ERREUR OPENAI
+    if (data.error) {
+      console.error("Erreur OpenAI:", data.error);
+      throw new Error(`OpenAI: ${data.error.message}`);
+    }
 
-    return new Response(content, { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // --- NETTOYAGE ET VALIDATION (LE CŒUR DU CORRECTIF) ---
+    let content = data.choices[0].message.content;
+
+    // 1. On nettoie les balises Markdown éventuelles
+    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    // 2. On supprime les signes "+" devant les chiffres (La cause de votre bug)
+    // Ex: "communication": +10  ===> "communication": 10
+    content = content.replace(/:\s*\+(\d+)/g, ': $1');
+
+    // 3. On vérifie que c'est valide AVANT d'envoyer
+    try {
+      const parsed = JSON.parse(content); // Test si ça plante ici (côté serveur)
+      
+      // Si on arrive là, c'est que le JSON est propre. On le renvoie.
+      return new Response(JSON.stringify(parsed), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e) {
+      console.error("JSON invalide reçu de l'IA :", content);
+      throw new Error("L'IA a généré un format invalide impossible à nettoyer.");
+    }
 
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
