@@ -9,10 +9,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Gestion CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
     const { gameType } = await req.json();
@@ -20,29 +17,50 @@ serve(async (req) => {
     let systemPrompt = "";
     let userPrompt = "";
 
-    // CONFIGURATION DES PROMPTS
     if (gameType === 'salon') {
-      systemPrompt = `Tu es un expert en psychogériatrie.
-      Génère un scénario de dialogue difficile avec un patient (Mme Durand).
-      RÈGLES CRITIQUES JSON :
-      1. Renvoie UNIQUEMENT un tableau JSON valide [ ... ].
-      2. NE METS JAMAIS de signe "+" devant les nombres positifs (Interdit : "+10", Obligatoire : "10").
-      3. Structure : [{ "id": 1, "text": "...", "choices": [{ "impact": {"communication": 10} }] }]`;
+      // --- PROMPT RENFORCÉ POUR LE SALON ---
+      systemPrompt = `Tu es un expert en formation EHPAD.
+      Génère un scénario de dialogue interactif (Jeu de rôle).
+      
+      RÈGLES STRICTES POUR LE JSON :
+      1. Renvoie UNIQUEMENT un tableau d'objets [].
+      2. PAS de signe "+" devant les nombres (Ex: met "10", pas "+10").
+      3. CHAQUE étape doit avoir une liste de "choices" avec AU MOINS 2 choix.
+      4. Les clés OBLIGATOIRES dans "choices" sont : 
+         - "text" (Ce qui est écrit sur le bouton)
+         - "next" (L'ID de l'étape suivante)
+         - "type" ("empathic", "authoritarian", "avoidant")
+         - "impact" (Objet stats, ex: {"communication": 10})
+
+      Structure Modèle :
+      [
+        {
+          "id": 1,
+          "speaker": "Mme Durand",
+          "emotion": "angry",
+          "text": "Je veux rentrer chez moi !",
+          "choices": [
+            { "text": "Je comprends votre angoisse (Empathie)", "next": 2, "type": "empathic", "impact": {"communication": 10} },
+            { "text": "Ce n'est pas possible (Autorité)", "next": 3, "type": "authoritarian", "impact": {"communication": -10} }
+          ]
+        },
+        { "id": 2, "speaker": "Mme Durand", "emotion": "calm", "text": "Merci...", "choices": [], "end": true },
+        { "id": 3, "speaker": "Mme Durand", "emotion": "sad", "text": "Vous êtes méchant...", "choices": [], "end": true }
+      ]`;
       
       const situations = [
-        "Mme Durand cherche son chat imaginaire.",
-        "Mme Durand refuse sa toilette.",
-        "Mme Durand veut aller travailler (alors qu'elle est retraitée).",
-        "Mme Durand pense qu'on lui a volé ses bijoux."
+        "Mme Durand refuse sa toilette car elle a froid.",
+        "Mme Durand cherche son chat qui n'existe pas.",
+        "Mme Durand accuse le personnel de vol.",
+        "Mme Durand pleure car sa fille ne vient pas."
       ];
-      userPrompt = `Situation : ${situations[Math.floor(Math.random() * situations.length)]}`;
+      userPrompt = `Génère un scénario complet sur ce thème : ${situations[Math.floor(Math.random() * situations.length)]}`;
     } else {
-      // Par défaut (Cuisine)
-      systemPrompt = `Tu es expert HACCP. Génère un JSON strict sans signe "+" devant les nombres.`;
+      // Prompt Cuisine
+      systemPrompt = `Tu es expert HACCP. Génère un JSON strict pour la cuisine.`;
       userPrompt = "Scénario cuisine hygiène.";
     }
 
-    // APPEL OPENAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -60,35 +78,16 @@ serve(async (req) => {
     });
 
     const data = await response.json();
-    
-    // GESTION ERREUR OPENAI
-    if (data.error) {
-      console.error("Erreur OpenAI:", data.error);
-      throw new Error(`OpenAI: ${data.error.message}`);
-    }
+    if (data.error) throw new Error(data.error.message);
 
-    // --- NETTOYAGE ET VALIDATION (LE CŒUR DU CORRECTIF) ---
+    // --- NETTOYAGE ---
     let content = data.choices[0].message.content;
-
-    // 1. On nettoie les balises Markdown éventuelles
     content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    content = content.replace(/:\s*\+(\d+)/g, ': $1'); // Retire les "+"
 
-    // 2. On supprime les signes "+" devant les chiffres (La cause de votre bug)
-    // Ex: "communication": +10  ===> "communication": 10
-    content = content.replace(/:\s*\+(\d+)/g, ': $1');
-
-    // 3. On vérifie que c'est valide AVANT d'envoyer
-    try {
-      const parsed = JSON.parse(content); // Test si ça plante ici (côté serveur)
-      
-      // Si on arrive là, c'est que le JSON est propre. On le renvoie.
-      return new Response(JSON.stringify(parsed), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } catch (e) {
-      console.error("JSON invalide reçu de l'IA :", content);
-      throw new Error("L'IA a généré un format invalide impossible à nettoyer.");
-    }
+    return new Response(content, {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
