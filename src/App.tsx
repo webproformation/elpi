@@ -84,27 +84,28 @@ const CreateAccountView = ({ email, onComplete }: { email: string, onComplete: (
   );
 };
 
-// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - MODE IA) ---
+// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - UI CORRIGÉE) ---
 const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void, currentStats: Stats }) => {
   const [scenario, setScenario] = useState<any[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [isFallback, setIsFallback] = useState(false); // Pour savoir si on est en mode secours
 
-  // Scénario de secours (Hardcodé)
+  // Scénario de secours (Amélioré un peu en attendant les crédits)
   const FALLBACK_SCENARIO = [
     {
-      id: 1, speaker: "Mme Durand", emotion: "angry", 
-      text: "NON ! Je ne veux voir personne ! Ma fille m'a encore posé un lapin !",
+      id: 1, speaker: "Mme Durand", emotion: "sad", 
+      text: "(Regarde par la fenêtre) Ils m'ont oublié... Personne ne vient me chercher. Je suis abandonnée ici.",
       choices: [
-        { text: "Je comprends votre colère (Empathie)", type: "empathic", impact: { communication: +20 }, next: 2 },
-        { text: "Calmez-vous madame (Autoritaire)", type: "authoritarian", impact: { communication: -10 }, next: 3 }
+        { text: "Mais non, je suis là moi. Vous n'êtes pas seule.", type: "empathic", impact: { communication: +10 }, next: 2 },
+        { text: "Cessez de dire des bêtises, votre fille vient dimanche.", type: "authoritarian", impact: { communication: -10 }, next: 3 },
+        { text: "Regardez la télé, ça vous changera les idées.", type: "avoidant", impact: { communication: -5 }, next: 3 }
       ]
     },
-    { id: 2, speaker: "Mme Durand", emotion: "happy", text: "Merci de m'écouter... Vous êtes gentil.", choices: [], end: true },
-    { id: 3, speaker: "Mme Durand", emotion: "angry", text: "Ne me donnez pas d'ordres ! Sortez !", choices: [], end: true }
+    { id: 2, speaker: "Mme Durand", emotion: "happy", text: "C'est gentil... Vous restez un peu avec moi ?", choices: [], end: true },
+    { id: 3, speaker: "Mme Durand", emotion: "angry", text: "Vous ne comprenez rien ! Laissez-moi tranquille !", choices: [], end: true }
   ];
 
-  // Chargement automatique au lancement
   useEffect(() => {
     const fetchScenario = async () => {
       setLoading(true);
@@ -114,9 +115,11 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
         });
         if (error || !data) throw new Error("Erreur IA");
         setScenario(data);
+        setIsFallback(false);
       } catch (err) {
         console.error("Échec IA Salon, utilisation secours", err);
         setScenario(FALLBACK_SCENARIO);
+        setIsFallback(true);
       } finally {
         setLoading(false);
       }
@@ -135,7 +138,7 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
   if (loading) return (
     <div className="h-screen bg-gray-900 flex flex-col items-center justify-center text-white space-y-4">
       <Loader2 className="w-12 h-12 animate-spin text-[#962588]" />
-      <p className="text-xl font-medium animate-pulse">L'IA génère le dialogue de Mme Durand...</p>
+      <p className="text-xl font-medium animate-pulse">L'IA analyse le dossier patient...</p>
     </div>
   );
 
@@ -146,14 +149,22 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
       <div className="absolute inset-0"><div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div><img src="/salon.png" alt="Salon" className="w-full h-full object-cover" /></div>
       <button onClick={onClose} className="absolute top-6 right-6 z-50 bg-white/20 p-2 rounded-full text-white"><X className="w-6 h-6" /></button>
       
-      {/* HUD STATS SIMPLIFIÉ */}
-      <div className="absolute top-6 left-6 z-50 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-white font-bold flex gap-4">
-        <span className="text-purple-400">Communication: {currentStats.communication}%</span>
+      {/* HUD STATS COMPLET */}
+      <div className="absolute top-6 left-6 z-50 flex flex-col gap-2">
+        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><ShieldCheck className="w-4 h-4 text-blue-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-blue-500 transition-all" style={{ width: `${currentStats.security}%` }}></div></div></div>
+        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><Sparkles className="w-4 h-4 text-yellow-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-yellow-500 transition-all" style={{ width: `${currentStats.hygiene}%` }}></div></div></div>
+        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"><MessageCircle className="w-4 h-4 text-purple-400" /><div className="w-24 h-2 bg-gray-700 rounded-full"><div className="h-full bg-purple-500 transition-all" style={{ width: `${currentStats.communication}%` }}></div></div></div>
       </div>
+
+      {/* Indication Mode Dégradé (si pas de crédit IA) */}
+      {isFallback && (
+        <div className="absolute bottom-4 left-4 z-50 bg-red-500/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+          ⚠️ Mode hors-ligne (IA indisponible)
+        </div>
+      )}
 
       <div className={`z-10 mt-auto mb-8 transition-all duration-500 transform ${currentStep.emotion === 'angry' ? 'scale-110' : 'scale-100'}`}>
         <div className="w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 mx-auto">
-          {/* Assurez-vous d'avoir une image par défaut si l'émotion n'existe pas */}
           <img src={EMOTION_IMAGES[currentStep.emotion] || '/md2.png'} alt="Personnage" className="w-full h-full object-cover" />
         </div>
       </div>

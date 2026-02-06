@@ -19,31 +19,44 @@ serve(async (req) => {
     let userPrompt = "";
 
     // --- CAS 1 : SALON (NOUVEAU) ---
+    // --- CAS 1 : SALON (SCÉNARIO COMPLEXE & PSYCHOLOGIQUE) ---
     if (gameType === 'salon') {
-      systemPrompt = `Tu es un scénariste de jeu de rôle médical "Serious Game".
-      Tu dois générer un dialogue JSON interactif entre un soignant et un patient (Mme Durand).
+      systemPrompt = `Tu es un expert en psychogériatrie et formateur EHPAD.
+      Génère un scénario de simulation de dialogue difficile et réaliste.
       
-      Règles strictes :
-      1. Le JSON doit être un tableau d'objets (étapes).
-      2. Chaque étape a un ID, un locuteur, une émotion (angry, sad, happy, neutral), un texte, et des choix.
-      3. Les choix doivent avoir un "next" qui pointe vers l'ID de l'étape suivante.
-      4. Prévois une fin (end: true) après 3 ou 4 échanges.
+      CONTEXTE :
+      - Le patient (Mme Durand) souffre de troubles cognitifs (début Alzheimer ou anxiété sévère).
+      - Elle ne doit PAS être juste "méchante". Elle doit être confuse, anxieuse, ou délirante.
+      - Le soignant doit trouver la bonne posture (validation, diversion, empathie).
       
-      Structure attendue :
+      RÈGLES DU JSON :
+      - Génère une conversation en 3 ou 4 étapes minimum.
+      - Les choix ne doivent pas être caricaturaux (pas de "Je te frappe" vs "Je t'aime"). Fais des nuances subtiles.
+      - "type": "empathic" (bonne réponse), "authoritarian" (mauvaise), "avoidant" (mitigé).
+      
+      Structure JSON stricte :
       [
         {
           "id": 1,
           "speaker": "Mme Durand",
-          "emotion": "angry",
-          "text": "Je veux partir !",
+          "emotion": "sad", 
+          "text": "Je veux rentrer chez moi... Ma mère m'attend pour le dîner (délire : sa mère est décédée).",
           "choices": [
-            { "text": "Réponse autoritaire", "type": "authoritarian", "impact": {"communication": -10}, "next": 2 },
-            { "text": "Réponse empathique", "type": "empathic", "impact": {"communication": +20}, "next": 3 }
+            { "text": "Mais Madame, votre mère est morte depuis 20 ans ! (Confrontation)", "type": "authoritarian", "impact": {"communication": -20}, "next": 2 },
+            { "text": "C'est vrai ? Elle cuisinait quoi de bon votre maman ? (Diversion/Empathie)", "type": "empathic", "impact": {"communication": +15}, "next": 3 }
           ]
         },
-        ... (suite logique)
+        ... (suite logique des réactions)
       ]`;
-      userPrompt = "Génère un scénario court où Mme Durand est confuse et cherche son chat (qui n'est pas là). Le soignant doit gérer la situation.";
+      
+      // On demande une situation aléatoire à chaque fois
+      const situations = [
+        "Mme Durand cherche un objet imaginaire qu'on lui a 'volé'.",
+        "Mme Durand refuse sa toilette car elle pense qu'elle l'a déjà faite.",
+        "Mme Durand pleure car elle ne reconnait pas sa chambre.",
+        "Mme Durand veut aller prendre son bus pour le travail (elle est retraitée)."
+      ];
+      userPrompt = `Génère un scénario unique basé sur cette situation : ${situations[Math.floor(Math.random() * situations.length)]}`;
     } 
     // --- CAS 2 : CUISINE REPAS ---
     else if (gameType === 'kitchen-meal') {
