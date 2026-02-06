@@ -114,7 +114,7 @@ const EMOTION_IMAGES: Record<string, string> = {
   depressed: '/md4.png'
 };
 
-// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - CORRECTION JSON "+") ---
+// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - CORRIGÉ JSON +) ---
 const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void, currentStats: Stats }) => {
   const [scenario, setScenario] = useState<any[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
@@ -149,27 +149,25 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
 
         let finalScenario = data;
 
-        // --- CORRECTIF JSON (Nettoyage des "+" interdits) ---
+        // --- ZONE DE NETTOYAGE CRITIQUE ---
         if (typeof finalScenario === 'string') {
           console.log("⚠️ Reçu comme texte, nettoyage en cours...");
           try {
-            // 1. Enlever les balises Markdown (```json et ```)
-            // 2. Enlever les "+" devant les nombres (ex: +10 -> 10) car interdit en JSON strict
             const cleanJson = finalScenario
-              .replace(/```json/g, '')
+              .replace(/```json/g, '')       // Enlève le balisage code
               .replace(/```/g, '')
-              .replace(/:\s*\+(\d+)/g, ': $1') // <--- LA LIGNE MAGIQUE ICI
+              .replace(/:\s*\+(\d+)/g, ': $1') // <--- SUPPRIME LES "+" INTERDITS (ex: +10 -> 10)
               .trim();
             
             finalScenario = JSON.parse(cleanJson);
           } catch (e) {
-            console.error("❌ Échec du parsing JSON. Texte reçu :", finalScenario);
-            throw new Error("Format illisible (SyntaxError)");
+            console.error("❌ Échec parsing JSON. Texte reçu :", finalScenario);
+            throw new Error("Format JSON invalide (SyntaxError)");
           }
         }
 
+        // Gestion du format (Tableau vs Objet)
         if (!Array.isArray(finalScenario)) {
-          // Supporte si l'IA renvoie un objet { tasks: [...] } au lieu du tableau direct
           if (finalScenario.tasks) finalScenario = finalScenario.tasks;
           else if (finalScenario.scenario) finalScenario = finalScenario.scenario;
           else throw new Error("L'IA n'a pas renvoyé une liste d'étapes.");
@@ -208,11 +206,12 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
     </div>
   );
 
+  // Protection anti-crash
   if (!loading && !currentStep && scenario.length > 0) {
      return (
        <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center text-white p-6 text-center">
          <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-         <h3 className="text-xl font-bold">Fin de scénario inattendue</h3>
+         <h3 className="text-xl font-bold">Erreur de lecture du scénario</h3>
          <button onClick={onClose} className="bg-[#962588] px-6 py-2 rounded-lg font-bold mt-4">Retour</button>
        </div>
      );
