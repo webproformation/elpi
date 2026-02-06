@@ -344,20 +344,55 @@ const BathroomGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onU
   );
 };
 
-// --- COMPOSANT JEU 4 : CUISINE (ORGANISATION & IA) ---
+// --- COMPOSANT JEU 4 : CUISINE (IA GÉNÉRATIVE + ORGANISATION) ---
 const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void }) => {
   const [phase, setPhase] = useState<'planning' | 'execution' | 'transmission' | 'feedback'>('planning');
+  const [isLoading, setIsLoading] = useState(false); // État de chargement IA
+
+  // Données par défaut (statiques)
   const [tasks, setTasks] = useState([
     { id: 1, name: "Toilette de Mme Michel", priority: "medium" },
     { id: 2, name: "Insuline M. Paul (8h00)", priority: "high" },
     { id: 3, name: "Lever Mme Durand", priority: "low" },
     { id: 4, name: "Petit-déjeuner M. Robert", priority: "medium" }
   ]);
+  
+  // Imprévus par défaut
+  const [scenarioNotifications, setScenarioNotifications] = useState([
+    "🔔 Mme Michel a sonné (Urgence toilette)",
+    "📞 La fille de M. Paul appelle"
+  ]);
+
   const [notifications, setNotifications] = useState<string[]>([]);
   const [report, setReport] = useState("");
   const [aiFeedback, setAiFeedback] = useState("");
 
-  // Phase 1 : Réorganisation (Simple monter/descendre)
+  // --- FONCTION POUR APPELER L'IA ---
+  const generateNewScenario = async () => {
+    setIsLoading(true);
+    try {
+      // Appel à votre fonction Supabase
+      const { data, error } = await supabase.functions.invoke('generate-scenario', {
+        body: { gameType: 'kitchen' }
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        // Mise à jour avec les données de l'IA
+        setTasks(data.tasks);
+        setScenarioNotifications(data.notifications);
+        alert("Nouveau scénario généré par l'IA !");
+      }
+    } catch (err) {
+      console.error("Erreur IA:", err);
+      alert("Impossible de joindre le coach IA. Chargement du scénario par défaut.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Phase 1 : Réorganisation
   const moveTask = (idx: number, dir: -1 | 1) => {
     if ((idx === 0 && dir === -1) || (idx === tasks.length - 1 && dir === 1)) return;
     const newTasks = [...tasks];
@@ -367,46 +402,32 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
     setTasks(newTasks);
   };
 
-  // Phase 2 : Simulation
+  // Phase 2 : Simulation (Utilise les notifications dynamiques)
   const startSimulation = () => {
     setPhase('execution');
-    setTimeout(() => setNotifications(prev => [...prev, "🔔 Mme Michel a sonné (Urgence toilette)"]), 2000);
-    setTimeout(() => setNotifications(prev => [...prev, "📞 La fille de M. Paul appelle"]), 5000);
+    // Déclenche les notifications stockées dans le state (soit par défaut, soit IA)
+    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[0]]), 2000);
+    setTimeout(() => setNotifications(prev => [...prev, scenarioNotifications[1]]), 5000);
     setTimeout(() => setPhase('transmission'), 8000);
   };
 
-  // Phase 4 : Analyse IA (Simulée)
+  // Phase 4 : Analyse IA (Simulée pour l'instant côté feedback texte)
   const analyzeReport = () => {
     let feedback = "Analyse de votre transmission :\n";
     let score = 0;
+    // Note : Idéalement, cette analyse devrait aussi être faite par l'IA via Supabase pour être contextuelle
+    if (report.length > 20) { feedback += "✅ Bonne longueur de transmission.\n"; score += 10; }
+    else { feedback += "⚠️ Soyez plus précis dans vos transmissions.\n"; }
     
-    if (report.toLowerCase().includes("insuline") && report.toLowerCase().includes("paul")) {
-      feedback += "✅ Bien vu : L'insuline de M. Paul est notée.\n";
-      score += 10;
-    } else {
-      feedback += "⚠️ Attention : Vous n'avez pas mentionné l'insuline de M. Paul !\n";
-    }
-
-    if (report.toLowerCase().includes("michel")) {
-      feedback += "✅ Bien : L'incident avec Mme Michel est rapporté.\n";
-      score += 10;
-    }
-
-    if (report.length < 20) {
-      feedback += "⚠️ Votre transmission est un peu courte. Soyez plus précis.\n";
-    } else {
-      feedback += "👍 Bonne longueur de transmission.\n";
-      score += 10;
-    }
-
-    setAiFeedback(feedback);
-    onUpdateStats({ communication: score, security: 10 }); // Bonus stats
+    setAiFeedback(feedback + "\n(Analyse basée sur la structure)");
+    onUpdateStats({ communication: score, security: 10 });
     setPhase('feedback');
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-[#F0F4F8] flex flex-col items-center justify-center p-4">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
         {/* Header */}
         <div className="bg-[#962588] p-6 text-white flex justify-between items-center">
           <h2 className="text-2xl font-bold flex items-center gap-2"><ListTodo className="w-6 h-6" /> Le Rush du Matin</h2>
@@ -419,10 +440,31 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
           {/* PHASE 1 : PLANNING */}
           {phase === 'planning' && (
             <div className="space-y-4">
+              
+              {/* BOUTON IA */}
+              <button 
+                onClick={generateNewScenario} 
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md hover:scale-[1.01] transition-transform"
+              >
+                {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                {isLoading ? "L'IA génère une situation..." : "Générer une situation inédite avec l'IA"}
+              </button>
+
+              <div className="h-px bg-gray-200 my-4"></div>
+
               <p className="text-gray-600">Mettez les tâches dans le bon ordre pour votre tournée :</p>
               {tasks.map((task, idx) => (
                 <div key={task.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
-                  <span className="font-medium text-gray-700">{idx + 1}. {task.name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-gray-200 text-gray-700 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">{idx + 1}</span>
+                    <div>
+                      <span className="font-medium text-gray-700 block">{task.name}</span>
+                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-600' : task.priority === 'medium' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                        {task.priority === 'high' ? 'Prioritaire' : task.priority === 'medium' ? 'Moyen' : 'Faible'}
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex gap-3">
                     <button 
                       onClick={() => moveTask(idx, -1)} 
@@ -432,9 +474,8 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
                           ? 'border-gray-100 text-gray-200 cursor-not-allowed' 
                           : 'border-purple-100 bg-purple-50 text-[#962588] hover:bg-[#962588] hover:text-white hover:border-[#962588] hover:scale-110 shadow-sm'
                       }`}
-                      title="Monter"
                     >
-                      <ChevronUp className="w-6 h-6" strokeWidth={3} />
+                      <ChevronUp className="w-5 h-5" strokeWidth={3} />
                     </button>
 
                     <button 
@@ -445,9 +486,8 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
                           ? 'border-gray-100 text-gray-200 cursor-not-allowed' 
                           : 'border-purple-100 bg-purple-50 text-[#962588] hover:bg-[#962588] hover:text-white hover:border-[#962588] hover:scale-110 shadow-sm'
                       }`}
-                      title="Descendre"
                     >
-                      <ChevronDown className="w-6 h-6" strokeWidth={3} />
+                      <ChevronDown className="w-5 h-5" strokeWidth={3} />
                     </button>
                   </div>
                 </div>
@@ -476,11 +516,11 @@ const KitchenGameView = ({ onClose, onUpdateStats }: { onClose: () => void, onUp
             <div className="space-y-4">
               <h3 className="font-bold text-gray-800">Fin de tournée. Rédigez votre transmission :</h3>
               <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 mb-2">
-                N'oubliez pas l'insuline de M. Paul et l'appel pour Mme Michel.
+                Conseil : N'oubliez pas de mentionner les incidents survenus (notifications).
               </div>
               <textarea 
                 className="w-full h-32 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#962588] outline-none"
-                placeholder="Ex: M. Paul a bien reçu son insuline à 8h..."
+                placeholder="Ex: J'ai effectué la toilette de..."
                 value={report}
                 onChange={(e) => setReport(e.target.value)}
               />
