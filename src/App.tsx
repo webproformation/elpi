@@ -114,14 +114,14 @@ const EMOTION_IMAGES: Record<string, string> = {
   depressed: '/md4.png'
 };
 
-// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - CORRIGÉ JSON +) ---
+// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - BLINDÉ & CORRIGÉ) ---
 const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void, currentStats: Stats }) => {
   const [scenario, setScenario] = useState<any[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
   const [loading, setLoading] = useState(true);
   const [isFallback, setIsFallback] = useState(false);
 
-  // Scénario de secours
+  // Scénario de secours (Si tout plante)
   const FALLBACK_SCENARIO = [
     {
       id: 1, speaker: "Mme Durand", emotion: "sad", 
@@ -145,40 +145,42 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
         });
 
         if (error) throw error;
-        if (!data) throw new Error("L'IA a renvoyé une donnée vide.");
+        if (!data) throw new Error("Donnée vide reçue de l'IA");
 
         let finalScenario = data;
 
-        // --- ZONE DE NETTOYAGE CRITIQUE ---
+        // --- NETTOYAGE AGRESSIF DU JSON (Double Sécurité) ---
         if (typeof finalScenario === 'string') {
-          console.log("⚠️ Reçu comme texte, nettoyage en cours...");
+          console.log("⚠️ Nettoyage du texte brut en cours...");
           try {
             const cleanJson = finalScenario
-              .replace(/```json/g, '')       // Enlève le balisage code
+              .replace(/```json/g, '')       // Enlève Markdown
               .replace(/```/g, '')
-              .replace(/:\s*\+(\d+)/g, ': $1') // <--- SUPPRIME LES "+" INTERDITS (ex: +10 -> 10)
+              .replace(/:\s*\+(\d+)/g, ': $1') // Enlève le "+" devant les nombres (ex: +10 -> 10)
               .trim();
             
             finalScenario = JSON.parse(cleanJson);
           } catch (e) {
             console.error("❌ Échec parsing JSON. Texte reçu :", finalScenario);
-            throw new Error("Format JSON invalide (SyntaxError)");
+            throw new Error("Format JSON invalide");
           }
         }
 
-        // Gestion du format (Tableau vs Objet)
+        // --- VALIDATION STRUCTURE ---
+        // On s'assure qu'on a bien un tableau
         if (!Array.isArray(finalScenario)) {
-          if (finalScenario.tasks) finalScenario = finalScenario.tasks;
-          else if (finalScenario.scenario) finalScenario = finalScenario.scenario;
-          else throw new Error("L'IA n'a pas renvoyé une liste d'étapes.");
+           // Si c'est un objet { tasks: [...] }, on récupère le tableau
+           if (finalScenario.tasks) finalScenario = finalScenario.tasks;
+           else if (finalScenario.scenario) finalScenario = finalScenario.scenario;
+           else throw new Error("Format invalide : Ce n'est pas une liste d'étapes.");
         }
 
-        console.log("✅ Scénario chargé :", finalScenario);
+        console.log("✅ Scénario chargé et valide :", finalScenario);
         setScenario(finalScenario);
         setIsFallback(false);
 
       } catch (err) {
-        console.error("🚨 Erreur chargement IA :", err);
+        console.error("🚨 Erreur critique (Chargement IA) :", err);
         setScenario(FALLBACK_SCENARIO);
         setIsFallback(true);
       } finally {
@@ -188,6 +190,7 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
     fetchScenario();
   }, []);
 
+  // Recherche de l'étape courante
   const currentStep = scenario.find(s => s.id === currentStepId);
 
   const handleChoice = (nextId: number, impact?: Partial<Stats>) => {
@@ -202,16 +205,16 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
   if (loading) return (
     <div className="h-screen bg-gray-900 flex flex-col items-center justify-center text-white space-y-4">
       <Loader2 className="w-12 h-12 animate-spin text-[#962588]" />
-      <p className="text-xl font-medium animate-pulse">L'IA génère le dialogue...</p>
+      <p className="text-xl font-medium animate-pulse">L'IA prépare la simulation...</p>
     </div>
   );
 
-  // Protection anti-crash
+  // Protection Anti-Crash si l'étape n'existe pas
   if (!loading && !currentStep && scenario.length > 0) {
      return (
        <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center text-white p-6 text-center">
          <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-         <h3 className="text-xl font-bold">Erreur de lecture du scénario</h3>
+         <h3 className="text-xl font-bold">Fin de scénario</h3>
          <button onClick={onClose} className="bg-[#962588] px-6 py-2 rounded-lg font-bold mt-4">Retour</button>
        </div>
      );
@@ -238,7 +241,7 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
         <div className="w-48 h-48 md:w-72 md:h-72 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 mx-auto bg-white">
           <img 
             src={EMOTION_IMAGES[currentStep?.emotion?.toLowerCase()] || '/md2.png'} 
-            onError={(e) => { e.currentTarget.src = '/md2.png'; }} 
+            onError={(e) => { e.currentTarget.src = '/md2.png'; }} // Fallback image si erreur 404
             alt="Personnage" 
             className="w-full h-full object-cover" 
           />
@@ -251,13 +254,15 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
           <div className="p-6 md:p-8">
             <p className="text-xl md:text-2xl text-gray-800 font-medium mb-8">"{currentStep?.text}"</p>
             <div className="space-y-3">
+              {/* PROTECTION ANTI-CRASH 'MAP' ICI */}
               {(!currentStep?.choices || currentStep.choices.length === 0) ? (
                 <button onClick={() => onClose()} className="w-full text-center p-4 rounded-xl bg-[#962588] text-white font-bold hover:bg-[#7e1d72]">Terminer l'échange</button>
               ) : (
                 currentStep.choices.map((choice: any, idx: number) => (
                   <button key={idx} onClick={() => handleChoice(choice.next, choice.impact)} className="w-full text-left p-4 rounded-xl bg-gray-50 hover:bg-[#E6F3F5] border-2 border-transparent hover:border-[#00aeb7] transition-all group flex items-center">
                     <div className="bg-white border border-gray-200 text-gray-500 font-bold w-8 h-8 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#00aeb7] group-hover:text-white shrink-0">{String.fromCharCode(65 + idx)}</div>
-                    <span className="text-gray-700 font-medium group-hover:text-[#00aeb7]">{choice.text}</span>
+                    {/* Protection si le texte du choix est manquant */}
+                    <span className="text-gray-700 font-medium group-hover:text-[#00aeb7]">{choice.text || "Continuer"}</span>
                   </button>
                 ))
               )}
