@@ -114,7 +114,7 @@ const EMOTION_IMAGES: Record<string, string> = {
   depressed: '/md4.png'
 };
 
-// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - FINAL & ROBUSTE) ---
+// --- COMPOSANT JEU 1 : VISUAL NOVEL (SALON - CORRECTION JSON "+") ---
 const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: () => void, onUpdateStats: (impact: Partial<Stats>) => void, currentStats: Stats }) => {
   const [scenario, setScenario] = useState<any[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
@@ -127,7 +127,7 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
       id: 1, speaker: "Mme Durand", emotion: "sad", 
       text: "Je me sens seule... Personne ne vient me voir.",
       choices: [
-        { text: "Je suis là avec vous. (Empathie)", type: "empathic", impact: { communication: +10 }, next: 2 },
+        { text: "Je suis là avec vous. (Empathie)", type: "empathic", impact: { communication: 10 }, next: 2 },
         { text: "Regardez la télé. (Évitement)", type: "avoidant", impact: { communication: -5 }, next: 3 }
       ]
     },
@@ -149,24 +149,29 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
 
         let finalScenario = data;
 
-        // --- CORRECTIF CRUCIAL : Forcer la lecture JSON si c'est du texte ---
+        // --- CORRECTIF JSON (Nettoyage des "+" interdits) ---
         if (typeof finalScenario === 'string') {
-          console.log("⚠️ Reçu comme texte, conversion en cours...");
+          console.log("⚠️ Reçu comme texte, nettoyage en cours...");
           try {
-            // Nettoyage au cas où l'IA ajoute des balises Markdown
-            const cleanJson = finalScenario.replace(/```json/g, '').replace(/```/g, '').trim();
+            // 1. Enlever les balises Markdown (```json et ```)
+            // 2. Enlever les "+" devant les nombres (ex: +10 -> 10) car interdit en JSON strict
+            const cleanJson = finalScenario
+              .replace(/```json/g, '')
+              .replace(/```/g, '')
+              .replace(/:\s*\+(\d+)/g, ': $1') // <--- LA LIGNE MAGIQUE ICI
+              .trim();
+            
             finalScenario = JSON.parse(cleanJson);
           } catch (e) {
-            console.error("❌ Échec de la conversion JSON :", finalScenario);
-            throw new Error("Format illisible");
+            console.error("❌ Échec du parsing JSON. Texte reçu :", finalScenario);
+            throw new Error("Format illisible (SyntaxError)");
           }
         }
 
-        // Vérification que c'est bien une liste
         if (!Array.isArray(finalScenario)) {
-          console.error("❌ Format invalide (pas un tableau) :", finalScenario);
-          // Si l'IA renvoie un objet { tasks: ... } au lieu d'un tableau, on gère
+          // Supporte si l'IA renvoie un objet { tasks: [...] } au lieu du tableau direct
           if (finalScenario.tasks) finalScenario = finalScenario.tasks;
+          else if (finalScenario.scenario) finalScenario = finalScenario.scenario;
           else throw new Error("L'IA n'a pas renvoyé une liste d'étapes.");
         }
 
@@ -203,14 +208,12 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
     </div>
   );
 
-  // Protection contre le crash si l'étape est introuvable
   if (!loading && !currentStep && scenario.length > 0) {
      return (
        <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center text-white p-6 text-center">
          <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
          <h3 className="text-xl font-bold">Fin de scénario inattendue</h3>
-         <p className="text-gray-400 mb-6">Étape {currentStepId} introuvable.</p>
-         <button onClick={onClose} className="bg-[#962588] px-6 py-2 rounded-lg font-bold">Retour au Hub</button>
+         <button onClick={onClose} className="bg-[#962588] px-6 py-2 rounded-lg font-bold mt-4">Retour</button>
        </div>
      );
   }
@@ -219,7 +222,6 @@ const VisualNovelView = ({ onClose, onUpdateStats, currentStats }: { onClose: ()
     <div className="h-screen bg-gray-900 font-sans relative flex flex-col items-center justify-center overflow-hidden">
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div>
-        {/* Correction pour l'image de fond qui charge mal parfois */}
         <img src="/salon.png" onError={(e) => e.currentTarget.style.display='none'} alt="Salon" className="w-full h-full object-cover" />
       </div>
       <button onClick={onClose} className="absolute top-6 right-6 z-50 bg-white/20 p-2 rounded-full text-white"><X className="w-6 h-6" /></button>
