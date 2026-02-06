@@ -23,27 +23,6 @@ type Stats = {
   communication: number; // Communication 💬
 };
 
-// --- CONFIGURATION SCÉNARIO SALON (AVEC VOS NOUVELLES IMAGES) ---
-const EMOTION_IMAGES: Record<string, string> = {
-  // --- VOS 4 IMAGES DE BASE ---
-  happy: '/md1.png',    // Souriante
-  neutral: '/md2.png',  // Neutre
-  angry: '/md3.png',    // Fâchée
-  sad: '/md4.png',      // Triste
-
-  // --- VOS 3 NOUVELLES IMAGES ---
-  // (Adaptez les noms ci-dessous si vos fichiers s'appellent autrement)
-  confused: '/md_confused.png',   // Confuse
-  anxious: '/md_anxious.png',     // Anxieuse
-  nostalgic: '/md_nostalgic.png', // Nostalgique
-
-  // --- Alias supplémentaires (au cas où l'IA utilise des synonymes) ---
-  joyful: '/md1.png',    // Synonyme de happy
-  calm: '/md2.png',      // Synonyme de neutral
-  agitated: '/md3.png',  // Synonyme de angry
-  fearful: '/md_anxious.png' // Synonyme de anxious
-};
-
 // --- COMPOSANT 1 : LANDING PAGE ---
 const LandingView = ({ onSuccess }: { onSuccess: (email: string) => void }) => {
   const [email, setEmail] = useState('');
