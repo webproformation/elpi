@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { 
   GripVertical, 
@@ -7,11 +7,7 @@ import {
   Clock,
   ClipboardList,
   Zap,
-  FolderHeart,
   X,
-  HeartPulse,
-  Pill,
-  Utensils,
   Loader2
 } from 'lucide-react';
 import { GameResults } from './GameResults';
@@ -102,7 +98,7 @@ export const GamePlanningEngine = ({ scenario, onClose }: any) => {
         <div className="flex flex-wrap gap-4">
           {patients.map(p => (
             <button key={p.id} onClick={() => setShowDossier(p)} className="bg-white/90 backdrop-blur-md p-2 pr-6 rounded-full shadow-lg flex items-center gap-3 border-2 border-transparent hover:border-[#00aeb7] transition-all group active:scale-95">
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00aeb7]/20"><img src={p.assets?.neutral || '/icone-perso.png'} className="w-full h-full object-cover" /></div>
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00aeb7]/20"><img src={p.assets?.neutral || '/icone-perso.png'} className="w-full h-full object-cover" alt={p.first_name} /></div>
               <div className="text-left">
                 <div className="text-[10px] font-black text-slate-800 uppercase leading-none">{p.first_name}</div>
                 <div className="text-[8px] font-bold text-[#00aeb7] uppercase tracking-widest mt-0.5">Dossier de soin</div>
@@ -113,7 +109,7 @@ export const GamePlanningEngine = ({ scenario, onClose }: any) => {
 
         {/* LISTE DES TÂCHES */}
         <div className="grid gap-4 mt-4">
-          {todoList.length > 0 ? todoList.map((task, index) => (
+          {todoList.length > 0 ? todoList.map((task) => (
             <div key={task.id} className="bg-white/95 backdrop-blur-md p-8 rounded-[3rem] shadow-xl border border-white flex items-center gap-6 group hover:border-[#00aeb7] transition-all animate-in slide-in-from-bottom-4">
               <div className="bg-slate-50 p-4 rounded-3xl text-slate-300 group-hover:text-[#00aeb7] transition-colors"><GripVertical size={24} /></div>
               <div className="flex-1">
@@ -132,13 +128,13 @@ export const GamePlanningEngine = ({ scenario, onClose }: any) => {
         </div>
       </div>
 
-      {/* POPUP DOSSIER (TRICHE PORTAL NON NÉCESSAIRE ICI CAR ON EST DANS LE MOTEUR) */}
+      {/* POPUP DOSSIER */}
       {showDossier && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-md">
           <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl border-4 border-white flex flex-col max-h-[85vh] overflow-hidden">
             <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden border-4 border-white shadow-md"><img src={showDossier.assets?.neutral || '/icone-perso.png'} className="w-full h-full object-cover" /></div>
+                <div className="w-16 h-16 rounded-2xl overflow-hidden border-4 border-white shadow-md"><img src={showDossier.assets?.neutral || '/icone-perso.png'} className="w-full h-full object-cover" alt={showDossier.first_name} /></div>
                 <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">{showDossier.first_name}</h3>
               </div>
               <button onClick={() => setShowDossier(null)} className="p-3 text-slate-400 hover:text-red-500 transition-all"><X size={24} /></button>
