@@ -60,7 +60,7 @@ export const AdminContent = ({ activeTab, loading, data, selection, onUserResult
       {/* VUE CATÉGORIES */}
       {activeTab === 'categories' && (
         <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {catData: categories.map((cat: any) => (
+          {data.categories?.map((cat: any) => (
             <div key={cat.id} className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-8 flex justify-between items-center shadow-sm hover:shadow-xl transition-all">
               <h4 className="font-black text-slate-800 uppercase tracking-widest text-xs">{cat.name}</h4>
               <button onClick={() => onDelete('categories', cat.id)} className="text-red-300 hover:text-red-500 transition-colors p-2"><Trash2 size={20} /></button>
@@ -119,7 +119,7 @@ export const AdminContent = ({ activeTab, loading, data, selection, onUserResult
           ) : selection.config.mechanic === 'error' ? (
             <GameErrorEditor 
               config={selection.config}
-              contents={data.chapters} 
+              contents={data.chapters}
               onSave={onSaveScenario}
             />
           ) : (
