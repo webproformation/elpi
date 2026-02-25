@@ -1,14 +1,12 @@
-import React from 'react';
 import { Loader2, Phone, MapPin, Info, Lock, Edit2, Trash2, Video, FileText as FileIcon, HeartPulse, Pill, Utensils } from 'lucide-react';
 import { GameScenarioEditor } from '../../components/admin/GameScenarioEditor';
 import { Game360Editor } from '../../components/admin/Game360Editor'; 
 import { GamePlanningEditor } from '../../components/admin/GamePlanningEditor';
-import { GameErrorEditor } from '../../components/admin/GameErrorEditor'; // Import du nouvel éditeur vidéo
+import { GameErrorEditor } from '../../components/admin/GameErrorEditor';
 
 export const AdminContent = ({ activeTab, loading, data, selection, onUserResults, onUserAccess, onUserEdit, onManageChapters, onEditScenario, onDelete, onEditChapter, onSaveScenario, onBack }: any) => {
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin w-8 h-8 text-[#00aeb7]" /></div>;
 
-  // IMPORTANT : On retire le wrapper blanc et la transition quand on édite un jeu pour laisser l'éditeur gérer son plein écran
   const isEditing = activeTab === 'edit-game';
 
   return (
@@ -62,7 +60,7 @@ export const AdminContent = ({ activeTab, loading, data, selection, onUserResult
       {/* VUE CATÉGORIES */}
       {activeTab === 'categories' && (
         <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {data.categories?.map((cat: any) => (
+          {catData: categories.map((cat: any) => (
             <div key={cat.id} className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-8 flex justify-between items-center shadow-sm hover:shadow-xl transition-all">
               <h4 className="font-black text-slate-800 uppercase tracking-widest text-xs">{cat.name}</h4>
               <button onClick={() => onDelete('categories', cat.id)} className="text-red-300 hover:text-red-500 transition-colors p-2"><Trash2 size={20} /></button>
@@ -111,7 +109,6 @@ export const AdminContent = ({ activeTab, loading, data, selection, onUserResult
               config={selection.config}
               characters={data.characters} 
               onSave={onSaveScenario}
-              onBack={onBack}
             />
           ) : selection.config.mechanic === '360' ? (
             <Game360Editor 
@@ -122,16 +119,14 @@ export const AdminContent = ({ activeTab, loading, data, selection, onUserResult
           ) : selection.config.mechanic === 'error' ? (
             <GameErrorEditor 
               config={selection.config}
-              contents={data.chapters} // On transmet les chapitres pour le liage pédagogique
+              contents={data.chapters} 
               onSave={onSaveScenario}
-              onBack={onBack}
             />
           ) : (
             <GameScenarioEditor 
               config={selection.config}
               onSave={onSaveScenario}
               onDelete={(id: string) => onDelete('game_configs', id)}
-              onBack={onBack}
             />
           )}
         </div>

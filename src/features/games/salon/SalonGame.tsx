@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, PartyPopper, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../auth/AuthContext';
-import { GameMechanicSelector } from '../GameMechanicSelector'; // <-- Changement ici
+import { GameMechanicSelector } from '../GameMechanicSelector';
 
 export const SalonGame = () => {
   const navigate = useNavigate();
@@ -18,9 +18,8 @@ export const SalonGame = () => {
 
   const loadRandomScenario = async () => {
     setLoading(true);
-    // On récupère désormais la colonne 'mechanic' en plus du reste
     const { data: configs } = await supabase.from('game_configs').select('*').eq('game_type', 'salon');
-    const { data: scores } = await supabase.from('game_scores').select('game_id').eq('user_id', user.id);
+    const { data: scores } = await supabase.from('game_scores').select('game_id').eq('user_id', user?.id);
     const playedIds = scores?.map(s => s.game_id) || [];
     const unplayed = configs?.filter(c => !playedIds.includes(c.id)) || [];
 

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../features/auth/AuthContext';
@@ -14,18 +13,17 @@ import { CharacterModal } from '../../components/admin/modals/CharacterModal';
 import { ConfigModal } from '../../components/admin/ConfigModal'; 
 
 export const AdminDashboard = () => {
-  const navigate = useNavigate();
   const { role, profile, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
-  const [data, setData] = useState<any>({ users: [], formations: [], categories: [], chapters: [], gameConfigs: [], characters: [] });
+  const [data, setData] = useState({ users: [], formations: [], categories: [], chapters: [], gameConfigs: [], characters: [] });
   const [selection, setSelection] = useState({ user: null as any, formation: null as any, config: null as any, enrolls: [] as string[] });
   const [loading, setLoading] = useState(false);
-  const [userStats, setUserStats] = useState<any>({ scores: [], progress: [], badges: [] });
+  const [userStats, setUserStats] = useState({ scores: [], progress: [], badges: [] });
   const [modals, setModals] = useState({ user: false, access: false, results: false, chapter: false, category: false, formation: false, config: false, character: false });
   const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  const [forms, setForms] = useState<any>({
+  const [forms, setForms] = useState({
     user: { email: '', password: '', first_name: '', last_name: '', role: 'student', address: '', phone: '' },
     chapter: { title: '', type: 'video' as any, url: '', content: '' },
     category: { name: '' },
@@ -101,18 +99,7 @@ export const AdminDashboard = () => {
       <AdminContent 
         activeTab={activeTab} loading={loading} data={data} 
         selection={selection}
-        onUserResults={async (u:any) => { 
-          setSelection({...selection, user: u}); 
-          const { data: s } = await supabase.from('game_scores').select('*').eq('user_id', u.id); 
-          const { data: p } = await supabase.from('user_progress').select('content_id').eq('user_id', u.id); 
-          const { data: b } = await supabase.from('user_badges').select('*, badges(*)').eq('user_id', u.id); 
-          setUserStats({ 
-            scores: s || [], 
-            progress: p?.map((i:any) => i.content_id) || [], 
-            badges: b?.map((i:any) => i.badges) || [] 
-          }); 
-          setModals({...modals, results: true}); 
-        }}
+        onUserResults={async (u:any) => { setSelection({...selection, user: u}); const { data: s } = await supabase.from('game_scores').select('*').eq('user_id', u.id); const { data: p } = await supabase.from('user_progress').select('content_id').eq('user_id', u.id); const { data: b } = await supabase.from('user_badges').select('*, badges(*)').eq('user_id', u.id); setUserStats({ scores: s || [], progress: p?.map((i:any) => i.content_id) || [], badges: b?.map((i:any) => i.badges) || [] }); setModals({...modals, results: true}); }}
         onUserAccess={async (u:any) => { const { data: e } = await supabase.from('enrollments').select('formation_id').eq('user_id', u.id); setSelection({...selection, user: u, enrolls: e?.map((i:any) => i.formation_id) || []}); setModals({...modals, access: true}); }}
         onUserEdit={(u:any) => { setIsCreatingUser(false); setSelection({...selection, user: u}); setForms({...forms, user: {email: u.email, password:'', first_name: u.first_name || '', last_name: u.last_name || '', role: u.role, address: u.address || '', phone: u.phone || ''}}); setModals({...modals, user: true}); }}
         onManageChapters={(f:any) => { setSelection({...selection, formation: f}); setActiveTab('chapters'); }}
