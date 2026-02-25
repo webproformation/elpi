@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Trash2, Save, Upload, Target, Loader2, VideoOff, 
-  Clock, Maximize2, Shield, Droplets, Link2, Play, Pause 
+  Clock, Maximize2, Link2, Play, Pause 
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -9,10 +9,10 @@ interface GameErrorEditorProps {
   config: any;
   contents?: any[];
   onSave: (data: any) => void;
-  onBack: () => void;
+  // Note: onBack supprimé car non utilisé dans ce composant
 }
 
-export const GameErrorEditor = ({ config, contents = [], onSave, onBack }: GameErrorEditorProps) => {
+export const GameErrorEditor = ({ config, contents = [], onSave }: GameErrorEditorProps) => {
   const [title, setTitle] = useState(config?.title || "");
   const [videoUrl, setVideoUrl] = useState(config?.config_json?.videoUrl || "");
   const [errors, setErrors] = useState<any[]>(config?.config_json?.errors || []);
@@ -32,13 +32,12 @@ export const GameErrorEditor = ({ config, contents = [], onSave, onBack }: GameE
     }
   }, [config]);
 
-  // FONCTION DE NETTOYAGE DU NOM DE FICHIER
   const sanitizeFileName = (name: string) => {
     return name
-      .normalize("NFD") // Sépare les accents des lettres
-      .replace(/[\u0300-\u036f]/g, "") // Supprime les accents
-      .replace(/\s+/g, '-') // Remplace les espaces par des tirets
-      .replace(/[^a-zA-Z0-9.\-_]/g, ''); // Supprime tout ce qui n'est pas alphanumérique
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9.\-_]/g, '');
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,21 +49,18 @@ export const GameErrorEditor = ({ config, contents = [], onSave, onBack }: GameE
     const fileName = `${Date.now()}-${cleanName}`;
 
     try {
-      // 1. Upload dans le bucket 'game-assets'
       const { error: upErr } = await supabase.storage
         .from('game-assets')
         .upload(`videos/${fileName}`, file);
 
       if (upErr) throw upErr;
 
-      // 2. Récupération de l'URL Publique
       const { data } = supabase.storage
         .from('game-assets')
         .getPublicUrl(`videos/${fileName}`);
 
       if (data?.publicUrl) {
         setVideoUrl(data.publicUrl);
-        console.log("Vidéo uploadée avec succès :", data.publicUrl);
       }
     } catch (err: any) {
       console.error("Erreur Upload:", err.message);
@@ -96,7 +92,16 @@ export const GameErrorEditor = ({ config, contents = [], onSave, onBack }: GameE
   };
 
   const updateError = (id: string, field: string, value: any) => {
-    setErrors(errors.map(err => err.id === id ? { ...err, [field]: value } : err));
+    setErrors(errors.map(err => {
+      if (err.id === id) {
+        if (field.includes('.')) {
+          const [parent, child] = field.split('.');
+          return { ...err, [parent]: { ...err[parent], [child]: value } };
+        }
+        return { ...err, [field]: value };
+      }
+      return err;
+    }));
   };
 
   const selectedError = errors.find(e => e.id === selectedId);
@@ -207,7 +212,7 @@ export const GameErrorEditor = ({ config, contents = [], onSave, onBack }: GameE
 
                 <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Titre</label>
-                    <input type="text" className="w-full p-4 bg-slate-50 border-none rounded-xl text-sm font-bold" value={selectedError.title} onChange={(e) => updateError(selectedError.id, 'title', e.target.value)} />
+                    <input type="text" className="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold" value={selectedError.title} onChange={(e) => updateError(selectedError.id, 'title', e.target.value)} />
                 </div>
 
                 <div className="space-y-1">
@@ -234,11 +239,11 @@ export const GameErrorEditor = ({ config, contents = [], onSave, onBack }: GameE
                 <div className="grid grid-cols-2 gap-3 pt-4">
                   <div className="space-y-1">
                     <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Sécurité</label>
-                    <input type="number" className="w-full p-2 text-xs font-black border-none bg-slate-50 rounded-xl text-center shadow-inner" value={selectedError.impact?.security || 0} onChange={(e) => updateError(selectedError.id, 'impact', { ...selectedError.impact, security: parseInt(e.target.value) })} />
+                    <input type="number" className="w-full p-2 text-xs font-black border-none bg-slate-50 rounded-xl text-center shadow-inner" value={selectedError.impact?.security || 0} onChange={(e) => updateError(selectedError.id, 'impact.security', parseInt(e.target.value))} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Hygiène</label>
-                    <input type="number" className="w-full p-2 text-xs font-black border-none bg-slate-50 rounded-xl text-center shadow-inner" value={selectedError.impact?.hygiene || 0} onChange={(e) => updateError(selectedError.id, 'impact', { ...selectedError.impact, hygiene: parseInt(e.target.value) })} />
+                    <input type="number" className="w-full p-2 text-xs font-black border-none bg-slate-50 rounded-xl text-center shadow-inner" value={selectedError.impact?.hygiene || 0} onChange={(e) => updateError(selectedError.id, 'impact.hygiene', parseInt(e.target.value))} />
                   </div>
                 </div>
               </div>
