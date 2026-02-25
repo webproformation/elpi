@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   X, 
   MessageCircle, 
   Rotate3d, 
   ClipboardList, 
   FileSearch, 
-  ChevronRight,
   Gamepad2
 } from 'lucide-react';
 
@@ -38,7 +37,7 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
       color: 'bg-slate-400'
     },
     {
-      id: 'planning', // AJOUT DE LA MÉCANIQUE MANQUANTE
+      id: 'planning',
       title: 'PLANIFICATION & INCIDENTS',
       desc: 'Gérer les priorités et réagir aux imprévus.',
       icon: <ClipboardList size={20} />,
@@ -46,8 +45,8 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
     },
     {
       id: 'error',
-      title: 'CHERCHEZ L\'ERREUR',
-      desc: 'Identifier des fautes sur une image.',
+      title: 'VIGILANCE VIDÉO',
+      desc: 'Identifier des fautes sur une séquence vidéo.',
       icon: <FileSearch size={20} />,
       color: 'bg-slate-400'
     }
@@ -56,7 +55,6 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    // On passe bien la pièce (room) lors de la sauvegarde
     onSave({ title, mechanic: selectedMechanic, room });
     setTitle('');
     onClose();
@@ -66,7 +64,7 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl border-4 border-white overflow-hidden animate-in zoom-in duration-300">
         
-        {/* Header correspondant à votre capture */}
+        {/* Header avec icône Gamepad2 */}
         <div className="p-8 flex justify-between items-start">
           <div className="flex items-center gap-4">
             <div className="bg-[#962588] p-3 rounded-2xl text-white shadow-lg">
@@ -74,7 +72,7 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter leading-none">Nouveau Jeu</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Choix de la mécanique</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Configuration initiale</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 transition-colors">
@@ -83,8 +81,6 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="px-8 pb-8 space-y-6">
-          
-          {/* Titre du scénario */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Titre du scénario</label>
             <input
@@ -97,7 +93,6 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
             />
           </div>
 
-          {/* Pièce de la maison */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Pièce de la maison</label>
             <select 
@@ -112,7 +107,6 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
             </select>
           </div>
 
-          {/* Mécanique de Gameplay */}
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 block">Mécanique de gameplay</label>
             <div className="space-y-2">
