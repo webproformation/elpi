@@ -15,20 +15,61 @@ import { ConfigModal } from '../../components/admin/ConfigModal';
 export const AdminDashboard = () => {
   const { role, profile, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
-  const [data, setData] = useState({ users: [], formations: [], categories: [], chapters: [], gameConfigs: [], characters: [] });
-  const [selection, setSelection] = useState({ user: null as any, formation: null as any, config: null as any, enrolls: [] as string[] });
+  
+  // Correction TS2322 : Ajout du type <any> pour éviter l'inférence 'never[]'
+  const [data, setData] = useState<any>({ 
+    users: [], 
+    formations: [], 
+    categories: [], 
+    chapters: [], 
+    gameConfigs: [], 
+    characters: [] 
+  });
+
+  const [selection, setSelection] = useState({ 
+    user: null as any, 
+    formation: null as any, 
+    config: null as any, 
+    enrolls: [] as string[] 
+  });
+
   const [loading, setLoading] = useState(false);
-  const [userStats, setUserStats] = useState({ scores: [], progress: [], badges: [] });
-  const [modals, setModals] = useState({ user: false, access: false, results: false, chapter: false, category: false, formation: false, config: false, character: false });
+  
+  // Correction TS2322 : Ajout du type <any>
+  const [userStats, setUserStats] = useState<any>({ 
+    scores: [], 
+    progress: [], 
+    badges: [] 
+  });
+
+  const [modals, setModals] = useState({ 
+    user: false, 
+    access: false, 
+    results: false, 
+    chapter: false, 
+    category: false, 
+    formation: false, 
+    config: false, 
+    character: false 
+  });
+
   const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  const [forms, setForms] = useState({
+  const [forms, setForms] = useState<any>({
     user: { email: '', password: '', first_name: '', last_name: '', role: 'student', address: '', phone: '' },
     chapter: { title: '', type: 'video' as any, url: '', content: '' },
     category: { name: '' },
     formation: { title: '', category_id: '' },
-    character: { first_name: '', last_name: '', description: '', medical_history: '', medications: '', dietary_info: '', assets: { neutral: null, happy: null, angry: null, confused: null } }
+    character: { 
+      first_name: '', 
+      last_name: '', 
+      description: '', 
+      medical_history: '', 
+      medications: '', 
+      dietary_info: '', 
+      assets: { neutral: null, happy: null, angry: null, confused: null } 
+    }
   });
 
   useEffect(() => { if (!authLoading) loadData(); }, [activeTab, selection.formation, authLoading]);
@@ -46,7 +87,14 @@ export const AdminDashboard = () => {
         const { data: c } = await supabase.from('contents').select('*').eq('formation_id', selection.formation.id).order('created_at');
         chaps = c || [];
       }
-      setData({ users: usr || [], formations: form || [], categories: cat || [], chapters: chaps || [], gameConfigs: gCfg || [], characters: chars || [] });
+      setData({ 
+        users: usr || [], 
+        formations: form || [], 
+        categories: cat || [], 
+        chapters: chaps || [], 
+        gameConfigs: gCfg || [], 
+        characters: chars || [] 
+      });
     } catch (err) { console.error("Erreur SQL:", err); }
     setLoading(false);
   };
@@ -66,7 +114,9 @@ export const AdminDashboard = () => {
     e.preventDefault();
     setLoading(true);
     const finalAssets: any = { neutral: '', happy: '', angry: '', confused: '' };
-    for (const [key, file] of Object.entries(forms.character.assets)) {
+    
+    // Correction TS2358 : Forcer le type de file pour instanceof
+    for (const [key, file] of Object.entries(forms.character.assets as Record<string, any>)) {
       if (file instanceof File) {
         const fileName = `${Date.now()}-${file.name}`;
         const { error: upErr } = await supabase.storage.from('character-assets').upload(fileName, file);
@@ -99,13 +149,43 @@ export const AdminDashboard = () => {
       <AdminContent 
         activeTab={activeTab} loading={loading} data={data} 
         selection={selection}
-        onUserResults={async (u:any) => { setSelection({...selection, user: u}); const { data: s } = await supabase.from('game_scores').select('*').eq('user_id', u.id); const { data: p } = await supabase.from('user_progress').select('content_id').eq('user_id', u.id); const { data: b } = await supabase.from('user_badges').select('*, badges(*)').eq('user_id', u.id); setUserStats({ scores: s || [], progress: p?.map((i:any) => i.content_id) || [], badges: b?.map((i:any) => i.badges) || [] }); setModals({...modals, results: true}); }}
-        onUserAccess={async (u:any) => { const { data: e } = await supabase.from('enrollments').select('formation_id').eq('user_id', u.id); setSelection({...selection, user: u, enrolls: e?.map((i:any) => i.formation_id) || []}); setModals({...modals, access: true}); }}
-        onUserEdit={(u:any) => { setIsCreatingUser(false); setSelection({...selection, user: u}); setForms({...forms, user: {email: u.email, password:'', first_name: u.first_name || '', last_name: u.last_name || '', role: u.role, address: u.address || '', phone: u.phone || ''}}); setModals({...modals, user: true}); }}
-        onManageChapters={(f:any) => { setSelection({...selection, formation: f}); setActiveTab('chapters'); }}
-        onEditScenario={(cfg:any) => { setSelection({...selection, config: cfg}); setActiveTab('edit-game'); }}
-        onDelete={async (t:string, id:string) => { if(confirm("Supprimer ?")) { await supabase.from(t).delete().eq('id', id); loadData(); if(activeTab === 'edit-game') setActiveTab('games'); } }}
-        onEditChapter={(c:any) => { setEditingChapterId(c.id); setForms({...forms, chapter: {title: c.title, type: c.type, url: c.url || '', content: c.content || ''}}); setModals({...modals, chapter: true}); }}
+        onUserResults={async (u:any) => { 
+          setSelection({...selection, user: u}); 
+          const { data: s } = await supabase.from('game_scores').select('*').eq('user_id', u.id); 
+          const { data: p } = await supabase.from('user_progress').select('content_id').eq('user_id', u.id); 
+          const { data: b } = await supabase.from('user_badges').select('*, badges(*)').eq('user_id', u.id); 
+          setUserStats({ 
+            scores: s || [], 
+            progress: p?.map((i:any) => i.content_id) || [], 
+            badges: b?.map((i:any) => i.badges) || [] 
+          }); 
+          setModals({...modals, results: true}); 
+        }}
+        onUserAccess={async (u:any) => { 
+          const { data: e } = await supabase.from('enrollments').select('formation_id').eq('user_id', u.id); 
+          setSelection({ ...selection, user: u, enrolls: e?.map((i:any) => i.formation_id) || [] }); 
+          setModals({ ...modals, access: true }); 
+        }}
+        onUserEdit={(u:any) => { 
+          setIsCreatingUser(false); 
+          setSelection({ ...selection, user: u }); 
+          setForms({ ...forms, user: { email: u.email, password: '', first_name: u.first_name || '', last_name: u.last_name || '', role: u.role, address: u.address || '', phone: u.phone || '' } }); 
+          setModals({ ...modals, user: true }); 
+        }}
+        onManageChapters={(f:any) => { setSelection({ ...selection, formation: f }); setActiveTab('chapters'); }}
+        onEditScenario={(cfg:any) => { setSelection({ ...selection, config: cfg }); setActiveTab('edit-game'); }}
+        onDelete={async (t:string, id:string) => { 
+          if(confirm("Supprimer ?")) { 
+            await supabase.from(t).delete().eq('id', id); 
+            loadData(); 
+            if(activeTab === 'edit-game') setActiveTab('games'); 
+          } 
+        }}
+        onEditChapter={(c:any) => { 
+          setEditingChapterId(c.id); 
+          setForms({ ...forms, chapter: { title: c.title, type: c.type, url: c.url || '', content: c.content || '' } }); 
+          setModals({ ...modals, chapter: true }); 
+        }}
         onSaveScenario={async (d:any) => { 
           await supabase.from('game_configs').update({ title: d.title, config_json: d.config_json }).eq('id', selection.config.id); 
           alert("Configuration enregistrée !"); 
