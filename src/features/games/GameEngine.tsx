@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Loader2, MessageCircle } from 'lucide-react';
 import { GameResults } from './GameResults';
@@ -8,7 +8,6 @@ interface GameEngineProps {
   onClose: () => void;
 }
 
-// Exportation nommée explicite pour éviter le SyntaxError
 export const GameEngine = ({ scenario, onClose }: GameEngineProps) => {
   const [currentStepId, setCurrentStepId] = useState(1);
   const [character, setCharacter] = useState<any>(null);
@@ -58,7 +57,6 @@ export const GameEngine = ({ scenario, onClose }: GameEngineProps) => {
     </div>
   );
 
-  // Correction : On passe l'objet scenario COMPLET pour que GameResults calcule les badges
   if (gameEnded || currentStep?.end) {
     return <GameResults scenario={scenario} finalScores={scores} onFinish={onClose} />;
   }
@@ -69,7 +67,6 @@ export const GameEngine = ({ scenario, onClose }: GameEngineProps) => {
     <div className="w-full max-w-4xl mx-auto flex flex-col items-center animate-in fade-in duration-700 font-sans">
       <div className="relative mb-8 group">
         <div className="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl bg-white relative z-10">
-          {/* Sécurité : on ne rend l'image que si l'URL est valide */}
           {characterImage && (
             <img 
               src={characterImage} 

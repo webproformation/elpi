@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export const NavigationDock = () => {
@@ -18,7 +17,7 @@ export const NavigationDock = () => {
           label="Elpi" 
           active={active === 'hub'} 
           onClick={() => navigate('/app')}
-          activeColor="text-[#f4a938]" // Couleur orange de la maison
+          activeColor="text-[#f4a938]" 
           gradient="from-[#f4a938] to-[#d68c20]"
         />
         <NavBtn 
@@ -26,7 +25,7 @@ export const NavigationDock = () => {
           label="Formations" 
           active={active === 'catalog'} 
           onClick={() => navigate('/app/catalog')}
-          activeColor="text-[#7db343]" // Couleur verte de la formation
+          activeColor="text-[#7db343]" 
           gradient="from-[#7db343] to-[#5a8c2a]"
         />
         <NavBtn 
@@ -34,7 +33,7 @@ export const NavigationDock = () => {
           label="Compétences" 
           active={active === 'ranking'} 
           onClick={() => navigate('/app/ranking')}
-          activeColor="text-[#3498db]" // Couleur bleue de la coupe
+          activeColor="text-[#3498db]" 
           gradient="from-[#3498db] to-[#2980b9]"
         />
         <NavBtn 
@@ -42,7 +41,7 @@ export const NavigationDock = () => {
           label="Profil" 
           active={active === 'profile'} 
           onClick={() => navigate('/app/profile')}
-          activeColor="text-[#95a5a6]" // Couleur grise du profil
+          activeColor="text-[#95a5a6]" 
           gradient="from-[#95a5a6] to-[#7f8c8d]"
         />
       </div>

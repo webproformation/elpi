@@ -1,4 +1,3 @@
-import React from 'react';
 import { Star, Trophy } from 'lucide-react';
 
 interface ResultsModalProps {

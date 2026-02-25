@@ -1,9 +1,8 @@
-import React from 'react';
 import { GameEngine } from './GameEngine';
 import { Game360Engine } from './Game360Engine';
 import { GamePlanningEngine } from './GamePlanningEngine';
-import { GameErrorEngine } from './GameErrorEngine'; // Import du nouveau moteur vidéo
-import { Eye, Rotate3d, AlertCircle, ClipboardList, Target } from 'lucide-react';
+import { GameErrorEngine } from './GameErrorEngine'; 
+import { Eye, AlertCircle } from 'lucide-react';
 
 interface SelectorProps {
   scenario: any;
@@ -15,23 +14,18 @@ export const GameMechanicSelector = ({ scenario, onClose }: SelectorProps) => {
 
   switch (mechanic) {
     case 'dialogue':
-      // Moteur classique d'entretien et dialogue
       return <GameEngine scenario={scenario} onClose={onClose} />;
 
     case '360':
-      // Moteur d'exploration immersive 360°
       return <Game360Engine scenario={scenario} onClose={onClose} />;
 
     case 'planning':
-      // Moteur de planification et gestion d'incidents
       return <GamePlanningEngine scenario={scenario} onClose={onClose} />;
 
     case 'error':
-      // NOUVEAU : Activation du moteur de vigilance sur séquence vidéo
       return <GameErrorEngine scenario={scenario} onClose={onClose} />;
 
     case 'report':
-      // Cette mécanique reste en placeholder pour le moment
       return <PlaceholderEngine icon={<Eye size={48} />} title="Compte-Rendu" onClose={onClose} />;
 
     default:

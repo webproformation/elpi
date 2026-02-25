@@ -72,7 +72,6 @@ export const GamePlanningEditor = ({ config, characters = [], onSave }: GamePlan
 
   return (
     <div className="space-y-8 pb-24 font-sans animate-in fade-in duration-500">
-      
       <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 space-y-10">
         <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Titre du scénario de planification</label>

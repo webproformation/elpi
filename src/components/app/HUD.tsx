@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -47,7 +47,6 @@ export const HUD = () => {
     <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700">
       
       <div className="flex items-center gap-3">
-        {/* BOUTON ADMIN : Apparaît seulement pour les admins, à gauche de l'avatar */}
         {isAdmin && (
           <button 
             onClick={() => navigate('/admin')}
@@ -59,7 +58,6 @@ export const HUD = () => {
           </button>
         )}
 
-        {/* SECTION AVATAR & BADGE */}
         <div className="relative group cursor-help">
           <div className="w-16 h-16 rounded-full border-4 border-white shadow-xl overflow-hidden bg-slate-50 relative z-10">
             <img src={profile?.avatar_url || '/icone-perso.png'} alt="Avatar" className="w-full h-full object-cover" />
@@ -70,7 +68,6 @@ export const HUD = () => {
         </div>
       </div>
       
-      {/* SECTION JAUGES */}
       <div className="bg-white/90 backdrop-blur-sm p-5 rounded-[2rem] shadow-xl border border-white/50 w-52 space-y-4">
         <h4 className="text-[10px] font-black text-[#00aeb7] uppercase tracking-[0.2em] text-center border-b border-slate-100 pb-3">
           Mes Compétences
