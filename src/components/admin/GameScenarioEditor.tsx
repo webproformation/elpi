@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, Star, Shield, Droplets, MessageCircle, AlertCircle } from 'lucide-react';
 
 export const GameScenarioEditor = ({ config, onSave, onDelete }: { config: any, onSave: (data: any) => void, onDelete: (id: string) => void }) => {
-  // États locaux pour le titre et les étapes
   const [title, setTitle] = useState(config?.title || "");
   const [steps, setSteps] = useState<any[]>(config?.config_json?.steps || []);
 
-  // IMPORTANT : Synchronisation quand on change de scénario
   useEffect(() => {
     if (config) {
       setTitle(config.title || "");
@@ -48,7 +46,6 @@ export const GameScenarioEditor = ({ config, onSave, onDelete }: { config: any, 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 font-sans">
       
-      {/* HEADER : TITRE ÉDITABLE & SUPPRESSION */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 gap-4">
         <div className="flex-1 w-full">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Titre du Scénario</label>
@@ -73,7 +70,6 @@ export const GameScenarioEditor = ({ config, onSave, onDelete }: { config: any, 
         </div>
       </div>
 
-      {/* LISTE DES ÉTAPES */}
       <div className="space-y-6">
         {steps.length === 0 && (
             <div className="bg-blue-50 border-2 border-dashed border-blue-100 rounded-[2rem] p-12 text-center">

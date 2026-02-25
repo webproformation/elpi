@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface AccessModalProps {
   user: any;
   categories: any[];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Plus, 
@@ -16,8 +16,6 @@ import {
   FolderHeart,
   X,
   HeartPulse,
-  Pill,
-  Utensils,
   Info
 } from 'lucide-react';
 
@@ -25,10 +23,9 @@ interface GamePlanningEditorProps {
   config: any;
   characters: any[];
   onSave: (data: any) => void;
-  onBack: () => void;
 }
 
-export const GamePlanningEditor = ({ config, characters = [], onSave, onBack }: GamePlanningEditorProps) => {
+export const GamePlanningEditor = ({ config, characters = [], onSave }: GamePlanningEditorProps) => {
   const [title, setTitle] = useState(config?.title || "");
   const [tasks, setTasks] = useState<any[]>(config?.config_json?.tasks || []);
   const [incidents, setIncidents] = useState<any[]>(config?.config_json?.incidents || []);
@@ -76,7 +73,6 @@ export const GamePlanningEditor = ({ config, characters = [], onSave, onBack }: 
   return (
     <div className="space-y-8 pb-24 font-sans animate-in fade-in duration-500">
       
-      {/* SECTION 1 : CONFIGURATION TITRE & RÉSIDENTS */}
       <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 space-y-10">
         <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Titre du scénario de planification</label>
@@ -125,7 +121,6 @@ export const GamePlanningEditor = ({ config, characters = [], onSave, onBack }: 
         </div>
       </div>
 
-      {/* LA TRICHE : PORTAL POUR LE POPUP */}
       {previewCharacter && createPortal(
         <div className="fixed inset-0 w-screen h-screen z-[9999] flex items-center justify-center p-6 bg-slate-900/95 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-2xl rounded-[4rem] shadow-2xl border-4 border-white flex flex-col max-h-[90vh] overflow-hidden">
@@ -149,24 +144,6 @@ export const GamePlanningEditor = ({ config, characters = [], onSave, onBack }: 
                   {previewCharacter.description || "Aucune information biographique renseignée."}
                 </p>
               </section>
-              <section className="space-y-3">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><HeartPulse size={14} className="text-[#962588]"/> Pathologies & Troubles</h4>
-                <p className="bg-purple-50/30 p-6 rounded-3xl text-slate-600 font-medium border border-purple-100/50 leading-relaxed">
-                  {previewCharacter.medical_history || "Aucun trouble renseigné."}
-                </p>
-              </section>
-              <section className="space-y-3">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Pill size={14} className="text-blue-500"/> Traitements & Soins</h4>
-                <p className="bg-blue-50/30 p-6 rounded-3xl text-slate-600 font-medium border border-blue-100/50 leading-relaxed">
-                  {previewCharacter.medications || "Aucun traitement spécifique."}
-                </p>
-              </section>
-              <section className="space-y-3">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Utensils size={14} className="text-green-600"/> Nutrition & Habitudes</h4>
-                <p className="bg-green-50/30 p-6 rounded-3xl text-slate-600 font-medium border border-green-100/50 leading-relaxed">
-                  {previewCharacter.dietary_info || "Régime normal."}
-                </p>
-              </section>
             </div>
             <div className="p-10 bg-slate-50 border-t border-slate-100">
               <button onClick={() => setPreviewCharacter(null)} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm shadow-2xl hover:bg-black transition-all">Fermer l'aperçu du dossier</button>
@@ -176,7 +153,6 @@ export const GamePlanningEditor = ({ config, characters = [], onSave, onBack }: 
         document.body
       )}
 
-      {/* SECTION 2 : TÂCHES ET INCIDENTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div className="space-y-6">
           <div className="flex justify-between items-center px-4">
@@ -229,7 +205,7 @@ export const GamePlanningEditor = ({ config, characters = [], onSave, onBack }: 
 
       <button 
         onClick={() => onSave({ title, config_json: { tasks, incidents, characterIds: selectedCharacterIds } })}
-        className="fixed bottom-10 right-10 z-50 bg-[#962588] text-white px-12 py-6 rounded-full font-black shadow-2xl hover:bg-[#7e1d72] hover:scale-105 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-sm border-b-8 border-black active:border-b-0 active:translate-y-2"
+        className="fixed bottom-10 right-10 z-50 bg-[#962588] text-white px-12 py-6 rounded-full font-black shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-sm border-b-8 border-black active:border-b-0 active:translate-y-2"
       >
         <Save size={24} /> Enregistrer la Configuration
       </button>

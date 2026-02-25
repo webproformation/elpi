@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { 
   User, HeartPulse, Pill, Utensils, Smile, X, 
-  Camera, Upload, CheckCircle, Video, Info, Star
+  Camera, Upload, CheckCircle, Video, Info
 } from 'lucide-react';
 
 interface CharacterModalProps {
@@ -41,10 +41,8 @@ export const CharacterModal = ({ show, onSave, data, setData, onClose }: Charact
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      {/* Conteneur principal de la modale avec overflow-hidden pour protéger les arrondis */}
       <div className="bg-white rounded-[2.5rem] max-w-5xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         
-        {/* HEADER FIXE (Ne scrolle pas) */}
         <div className="p-8 pb-4 border-b border-slate-100 flex justify-between items-center bg-white z-10">
           <div>
             <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
@@ -57,11 +55,9 @@ export const CharacterModal = ({ show, onSave, data, setData, onClose }: Charact
           </button>
         </div>
 
-        {/* ZONE SCROLLABLE INTERNE */}
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           <form onSubmit={onSave} className="space-y-12">
             
-            {/* SECTION 1 : IDENTITÉ ET SUPPORTS VISUELS */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black text-[#962588] uppercase tracking-[0.2em] flex items-center gap-2">
@@ -114,7 +110,6 @@ export const CharacterModal = ({ show, onSave, data, setData, onClose }: Charact
               </div>
             </div>
 
-            {/* SECTION 2 : DOSSIER CLINIQUE DÉTAILLÉ */}
             <div className="pt-8 border-t border-slate-100">
               <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                 <HeartPulse size={14}/> Dossier de Soins & Pathologies
@@ -156,7 +151,6 @@ export const CharacterModal = ({ show, onSave, data, setData, onClose }: Charact
               </div>
             </div>
 
-            {/* SECTION BOUTON VALIDATION */}
             <div className="pt-6">
               <button type="submit" className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black shadow-xl hover:bg-black transition-all transform active:scale-95 flex items-center justify-center gap-3 uppercase text-xs tracking-[0.2em]">
                 <Smile className="text-yellow-400 animate-pulse" size={20} /> Valider la fiche du Personnage

@@ -1,5 +1,4 @@
-import React from 'react';
-import { Edit2, Plus, Tags, FileText, Link as LinkIcon, Gamepad2, X, MessageSquare, Rotate3d, Target } from 'lucide-react';
+import { Edit2, Plus, Tags, FileText, Link as LinkIcon } from 'lucide-react';
 import { Editor } from '../Editor';
 
 interface ModalProps {
@@ -23,7 +22,14 @@ export const ChapterModal = ({ show, onClose, onSave, data, setData, editingId }
               <button key={t} type="button" onClick={() => setData({...data, type: t as any})} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${data.type === t ? 'bg-[#00aeb7] text-white shadow-md' : 'text-slate-500'}`}>{t.toUpperCase()}</button>
             ))}
           </div>
-          {data.type === 'text' ? <Editor content={data.content} onChange={(html) => setData({...data, content: html})} /> : <div className="relative"><LinkIcon className="absolute left-4 top-5 w-5 h-5 text-slate-400" /><input type="text" placeholder="Lien URL" required className="w-full pl-12 pr-4 py-4 bg-slate-50 border rounded-2xl outline-none" value={data.url} onChange={e => setData({...data, url: e.target.value})} /></div>}
+          {data.type === 'text' ? (
+            <Editor content={data.content} onChange={(html) => setData({...data, content: html})} />
+          ) : (
+            <div className="relative">
+              <LinkIcon className="absolute left-4 top-5 w-5 h-5 text-slate-400" />
+              <input type="text" placeholder="Lien URL" required className="w-full pl-12 pr-4 py-4 bg-slate-50 border rounded-2xl outline-none" value={data.url} onChange={e => setData({...data, url: e.target.value})} />
+            </div>
+          )}
           <div className="flex gap-4 pt-4 border-t mt-4">
             <button type="button" onClick={onClose} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition">Annuler</button>
             <button type="submit" className="flex-1 bg-[#00aeb7] text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-[#008c93]">Enregistrer</button>
