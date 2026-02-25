@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Save, Info, Shield, Droplets, MessageCircle, Upload, ArrowLeft, Target, Loader2, ImageOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Trash2, Save, Shield, Droplets, MessageCircle, Upload, ArrowLeft, Target, Loader2, ImageOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 export const Game360Editor = ({ config, onSave, onBack }: { config: any, onSave: (data: any) => void, onBack: () => void }) => {
@@ -85,7 +85,6 @@ export const Game360Editor = ({ config, onSave, onBack }: { config: any, onSave:
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <div className="bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white relative aspect-video group select-none">
-            {/* CORRECTION : On vérifie imageUrl avant de rendre l'image */}
             {imageUrl ? (
               <div ref={containerRef} className="relative w-full h-full cursor-crosshair" onClick={addHotspot} onMouseMove={handleDrag} onMouseUp={() => setIsDragging(false)} onMouseLeave={() => setIsDragging(false)}>
                 <img src={imageUrl} alt="360 view" className="w-full h-full object-cover pointer-events-none opacity-90" />

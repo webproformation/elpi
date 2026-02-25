@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, MessageSquare, ChevronRight, Star } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Trash2, Star } from 'lucide-react';
 
 interface ScenarioStep {
   id: number;
