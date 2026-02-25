@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Tags, FileText, Gamepad2, ExternalLink, ArrowLeft, Plus, Heart } from 'lucide-react';
 
@@ -18,13 +17,10 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, role, onAdd, fo
     }
   };
 
-  // Vérification de permission : admin OU super_admin
   const hasAccessToGames = role === 'admin' || role === 'super_admin';
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans flex text-slate-900">
-      
-      {/* SIDEBAR FIXE */}
       <div className="w-64 bg-slate-900 text-white flex flex-col fixed h-screen z-30">
         <div className="p-8">
           <div className="text-2xl font-black tracking-tighter text-[#00aeb7] flex items-center gap-2">
@@ -38,7 +34,6 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, role, onAdd, fo
           <NavItem icon={<Tags size={20}/>} label="Catégories" active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} />
           <NavItem icon={<FileText size={20}/>} label="Formations" active={activeTab === 'formations' || activeTab === 'chapters'} onClick={() => setActiveTab('formations')} />
           
-          {/* FIX : Affichage de l'onglet si role est admin ou super_admin */}
           {hasAccessToGames && (
             <NavItem 
               icon={<Gamepad2 size={20}/>} 
@@ -56,10 +51,7 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, role, onAdd, fo
         </div>
       </div>
 
-      {/* ZONE DE CONTENU PRINCIPALE */}
       <div className="flex-1 ml-64 flex flex-col min-h-screen">
-        
-        {/* HEADER DE PAGE UNIQUE */}
         <header className="bg-white border-b border-slate-200 sticky top-0 z-20 px-10 py-6 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-6">
             {(activeTab === 'chapters' || activeTab === 'edit-game') && (

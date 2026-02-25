@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { NavigationDock } from '../../components/layout/NavigationDock';
@@ -17,7 +17,6 @@ export const Catalog = () => {
   }, [user]);
 
   const fetchData = async () => {
-    // 1. Récupère les inscriptions
     const { data: enrollmentData } = await supabase.from('enrollments').select('formation_id').eq('user_id', user?.id);
     const enrolledIds = enrollmentData?.map(e => e.formation_id) || [];
 
@@ -27,14 +26,12 @@ export const Catalog = () => {
       return;
     }
 
-    // 2. Récupère les catégories + formations + tous les chapitres pour calculer le %
     const { data } = await supabase
       .from('categories')
       .select('*, formations!inner(*, contents(id))')
       .in('formations.id', enrolledIds)
       .order('name');
     
-    // 3. Récupère les chapitres terminés
     const { data: progress } = await supabase.from('user_progress').select('content_id').eq('user_id', user?.id);
     
     if (data) setCategories(data);
@@ -89,7 +86,6 @@ export const Catalog = () => {
                         <ChevronRight className="text-slate-300 group-hover:text-[#00aeb7] transition" />
                       </div>
                       
-                      {/* BARRE DE PROGRESSION */}
                       <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                         <div className={`h-full transition-all duration-500 ${percent === 100 ? 'bg-green-500' : 'bg-[#00aeb7]'}`} style={{ width: `${percent}%` }}></div>
                       </div>
